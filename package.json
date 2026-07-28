@@ -1,0 +1,22 @@
+{
+  "name": "ticker",
+  "version": "1.0.0",
+  "description": "Behavioural finance trading game for classroom demos",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/verdict.js && node test/css-audit.js && node test/e2e.js && node test/ws.js",
+    "test:verdict": "node test/verdict.js",
+    "test:e2e": "node test/e2e.js",
+    "test:ws": "node test/ws.js",
+    "test:timing": "node test/timing.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}
