@@ -5,7 +5,7 @@
  * type drives rendering:
  *   "percentage"  → paired horizontal bars (class vs study)
  *   "directional" → text verdict / rank blocks (no numeric bar)
- *   "descriptive" → motivation breakdown only
+ *   "descriptive" → share / buyer-return blocks (Round 5)
  */
 
 'use strict';
@@ -16,18 +16,12 @@ module.exports = {
     source: 'Financial Conduct Authority (2024)',
     type: 'percentage',
     value: 12, // FCA: notifications increased trading ~12%
-    secondaryLabel: 'Risky-trade share increase',
-    secondaryValue: 8, // FCA: +8% trades in risky assets
-    // Class metric: % change in live trades per player, R2 vs R1
-    classMetricKey: 'liveTradeFreqChangePct',
   },
   round3: {
     label: 'More trading in the trending name',
     source: 'Ontario Securities Commission',
     type: 'percentage',
     value: 14,
-    // Class metric: labelled-ticker live-trade share in R3 minus share in R1 (pp → shown as %)
-    classMetricKey: 'labelledTradeShareLiftPct',
   },
   round4: {
     label: 'Frequent traders vs. market return',

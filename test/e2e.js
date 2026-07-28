@@ -449,7 +449,6 @@ async function main() {
     '/js/mechanics/r2-alert.js',
     '/js/mechanics/r3-trending.js',
     '/js/mechanics/r4-leaderboard.js',
-    '/js/mechanics/r5-contract.js',
   ]) {
     const res = await fetch(BASE + p);
     check(`serves ${p}`, res.ok, `status ${res.status}`);

@@ -1,0 +1,14 @@
+services:
+  ticker:
+    build: .
+    image: ticker:latest
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      PORT: "3000"
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      PRESENTER_TOKEN: ${PRESENTER_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    init: true

@@ -38,11 +38,12 @@ export async function renderComparisonView(root, data) {
   root.querySelector('#comparison-reset')?.addEventListener('click', async () => {
     if (!confirm('Reset the entire game and clear all players?')) return;
     try {
+      const { api, getPresenterHeaders } = await import('./api.js');
       const demo = new URLSearchParams(location.search).has('demo');
-      await fetch('/api/present/reset', {
+      await api('/api/present/reset', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ demoMode: demo }),
+        body: { demoMode: demo },
+        headers: getPresenterHeaders(),
       });
     } catch (e) {
       alert(e.message || 'Reset failed');

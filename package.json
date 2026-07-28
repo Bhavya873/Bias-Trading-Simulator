@@ -1,6 +1,7 @@
 {
   "name": "ticker",
   "version": "1.0.0",
+  "private": true,
   "description": "Behavioural finance trading game for classroom demos",
   "main": "server.js",
   "scripts": {

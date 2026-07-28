@@ -23,10 +23,20 @@ export function clearPlayer() {
   localStorage.removeItem(LS_NAME);
 }
 
+const LS_PRESENTER = 'ticker_presenter_token';
+
+/** Optional presenter token from ?token=… (persisted) for PRESENTER_TOKEN-protected hosts. */
+export function getPresenterHeaders() {
+  const fromUrl = new URLSearchParams(location.search).get('token');
+  if (fromUrl) localStorage.setItem(LS_PRESENTER, fromUrl);
+  const token = fromUrl || localStorage.getItem(LS_PRESENTER) || '';
+  return token ? { 'x-presenter-token': token } : {};
+}
+
 export async function api(path, opts = {}) {
   const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
     ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
     body: opts.body != null ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));

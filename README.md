@@ -6,19 +6,48 @@ Classroom demo: 3–6 students join from their phones, play 5 short trading roun
 
 ## Quick start
 
+### Local (Node.js)
+
 ```bash
 npm install
 npm start
 ```
 
-Open the URLs printed in the terminal:
+### Docker
+
+Requires [Docker](https://docs.docker.com/get-docker/):
+
+```bash
+docker compose up --build
+# or: docker-compose up --build
+```
 
 | Role | URL |
 |------|-----|
-| Presenter (project this) | `http://<LAN-IP>:3000/present` |
+| Presenter | `http://localhost:3000/present` |
+| Players | `http://localhost:3000/` |
+| Players (phones on LAN) | `http://<LAN-IP>:3000/` |
+
+```bash
+PORT=4000 docker compose up --build
+PUBLIC_URL=https://your-app.example.com docker compose up --build
+PRESENTER_TOKEN=secret docker compose up --build
+```
+
+Snapshots write to `./data`. Health check: `GET /api/health`.
+
+---
+
+Open the URLs printed by `npm start`:
+
+| Role | URL |
+|------|-----|
+| Presenter | `http://<LAN-IP>:3000/present` |
 | Players | `http://<LAN-IP>:3000/` |
 
-Players open the player URL, enter the **lobby code** shown on the presenter screen, and type their name. Phones must reach the same host as the presenter — campus Wi‑Fi often blocks device-to-device traffic; if joins fail, share a **hotspot from the presenter laptop**, or deploy with a public `PUBLIC_URL`.
+Players enter the **lobby code** from the presenter screen. Campus Wi‑Fi often blocks phone→laptop traffic — use a hotspot or set `PUBLIC_URL`.
+
+When `PRESENTER_TOKEN` is set, open the presenter as `/present?token=…` so controls stay authorized.
 
 ### Ports
 
@@ -39,7 +68,7 @@ Run the server from **either** Windows PowerShell or WSL, not both. With WSL's m
 
 ### Rehearsal (solo)
 
-- Open `/present?demo=1`, or check **Allow 1 player (rehearsal)** on the lobby screen.
+- Open `/present?demo=1` (enables 1-player mode).
 - Start Round 1 with a single browser tab as the player.
 
 ## Trading

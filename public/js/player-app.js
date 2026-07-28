@@ -1,5 +1,6 @@
 import {
   api,
+  clearPlayer,
   connectState,
   getStoredPlayer,
   storePlayer,
@@ -16,7 +17,6 @@ let playerId = getStoredPlayer().player_id;
 let playerName = getStoredPlayer().name;
 let screen = 'boot';
 let lastAlertId = null;
-let motivationShown = false;
 let rulesOpen = false;
 let countdownTimer = null;
 let lastRoundKey = '';
@@ -34,13 +34,11 @@ connectState((s) => {
   ) {
     const local = state.players[playerId];
     const remote = s.players[playerId];
-    // Prefer whichever has more recent cash movement in the optimistic direction
-    // by keeping local holdings/cash until the server catches up.
+    // Keep local holdings/cash until the server catches up.
     s.players[playerId] = {
       ...remote,
       cash: local.cash,
       holdings: { ...local.holdings },
-      contract: local.contract ? { ...local.contract } : remote.contract,
       portfolioValue: local.portfolioValue,
       returnPct: local.returnPct,
     };
@@ -63,8 +61,7 @@ connectState((s) => {
   } catch (_) {
     playerId = null;
     playerName = null;
-    localStorage.removeItem('ticker_player_id');
-    localStorage.removeItem('ticker_player_name');
+    clearPlayer();
   }
 })();
 
@@ -80,25 +77,16 @@ function route() {
     if (!state.players[playerId]) {
       playerId = null;
       playerName = null;
-      localStorage.removeItem('ticker_player_id');
-      localStorage.removeItem('ticker_player_name');
+      clearPlayer();
       renderJoin();
       return;
     }
-    motivationShown = false;
     lastRoundKey = '';
     renderLobby();
     return;
   }
 
-  if (state.phase === 'motivation') {
-    // Legacy phase — send players to between wait
-    renderBetween();
-    return;
-  }
-
   if (state.phase === 'between') {
-    motivationShown = false;
     lastRoundKey = '';
     renderBetween();
     return;
@@ -110,7 +98,6 @@ function route() {
   }
 
   if (state.phase === 'buyin' || state.phase === 'live') {
-    motivationShown = false;
     const me = state.players[playerId];
     const holdingsKey = me
       ? Object.entries(me.holdings || {})
@@ -124,8 +111,6 @@ function route() {
       state.pendingAlert?.alert_id || '',
       me?.cash,
       holdingsKey,
-      me?.contract?.shares || 0,
-      me?.contract?.side || '',
     ].join('|');
 
     if (key === lastRoundKey && screen === 'round') {
@@ -408,13 +393,6 @@ function recomputeMyPortfolio() {
   for (const t of state.assets || []) {
     value += (me.holdings[t] || 0) * (state.prices[t] || 0);
   }
-  if (me.contract && state.contract) {
-    const px =
-      me.contract.side === 'yes'
-        ? state.contract.yesCents / 100
-        : state.contract.noCents / 100;
-    value += me.contract.shares * px;
-  }
   me.portfolioValue = round2(value);
   me.returnPct = round2(((value - 100) / 100) * 100);
 }
@@ -432,8 +410,6 @@ function syncRoundKey() {
     state.pendingAlert?.alert_id || '',
     me.cash,
     holdingsKey,
-    me.contract?.shares || 0,
-    me.contract?.side || '',
   ].join('|');
 }
 

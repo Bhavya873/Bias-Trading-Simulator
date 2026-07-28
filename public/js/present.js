@@ -1,4 +1,4 @@
-import { api, connectState } from './api.js';
+import { api, connectState, getPresenterHeaders } from './api.js';
 import { fmtMoney } from './format.js';
 import { shareBar, valueBar } from './charts.js';
 import { renderLeaderboard } from './mechanics/r4-leaderboard.js';
@@ -8,13 +8,18 @@ const app = document.getElementById('app');
 let state = null;
 let comparison = null;
 
-const demoFromUrl = new URLSearchParams(location.search).has('demo');
+const params = new URLSearchParams(location.search);
+const demoFromUrl = params.has('demo');
 
 connectState(async (s) => {
   state = s;
   if (demoFromUrl && !s.demoMode) {
     try {
-      await api('/api/present/demo', { method: 'POST', body: { on: true } });
+      await api('/api/present/demo', {
+        method: 'POST',
+        body: { on: true },
+        headers: getPresenterHeaders(),
+      });
     } catch (_) {
       /* ignore */
     }
@@ -33,7 +38,7 @@ connectState(async (s) => {
 
 async function post(path, body = {}) {
   try {
-    await api(path, { method: 'POST', body });
+    await api(path, { method: 'POST', body, headers: getPresenterHeaders() });
   } catch (e) {
     alert(e.message);
   }
@@ -54,7 +59,7 @@ function render() {
     const el = document.getElementById('lb');
     if (el) renderLeaderboard(el, state, null);
   }
-  if (state.round === 4 && (state.phase === 'between' || state.phase === 'motivation')) {
+  if (state.round === 4 && state.phase === 'between') {
     const el = document.getElementById('lb-between');
     if (el) renderLeaderboard(el, state, null);
   }
@@ -84,7 +89,6 @@ function phaseText() {
     return `Buy-in ${left}s`;
   }
   if (state.phase === 'live') return `Live tick ${state.tick}/${state.tickCount}`;
-  if (state.phase === 'motivation') return 'Motivation prompt';
   if (state.phase === 'between') return '';
   return '';
 }
@@ -152,7 +156,7 @@ function renderLobby() {
 
 function mainPanel() {
   if (state.phase === 'buyin' || state.phase === 'live') return livePanel();
-  if (state.phase === 'between' || state.phase === 'motivation') return betweenPanel();
+  if (state.phase === 'between') return betweenPanel();
   return `<div class="sm text-2">Phase: ${esc(state.phase)}</div>`;
 }
 

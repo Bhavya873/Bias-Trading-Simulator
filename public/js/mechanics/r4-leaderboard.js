@@ -14,7 +14,7 @@ export function renderLeaderboard(container, state, myId) {
       return `
         <div class="leaderboard__row ${isYou ? 'is-you' : ''}" data-id="${r.id}">
           <span class="leaderboard__rank">${r.rank}</span>
-          <span class="leaderboard__name">${escapeHtml(r.name)}${isYou ? '' : ''}</span>
+          <span class="leaderboard__name">${escapeHtml(r.name)}</span>
           <span class="leaderboard__return ${cls}">${fmtPct(r.returnPct)}</span>
         </div>
       `;
