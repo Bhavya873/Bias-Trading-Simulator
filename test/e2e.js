@@ -400,21 +400,26 @@ async function main() {
 
   const c = await get('/api/comparison');
   check('comparison n matches players', c.n === 4);
-  check('R2 benchmark is FCA 12%', c.round2.value === 12);
-  check('R3 benchmark is OSC 14%', c.round3.value === 14);
-  check('R2 class value computed', typeof c.round2.classValue === 'number');
-  check('R3 lift positive (all traded labelled)', c.round3.classValue > 0, String(c.round3.classValue));
-  const verdicts = ['Directionally consistent', 'Inconclusive (n too small)'];
-  check('R2 verdict valid', verdicts.includes(c.round2.verdict), c.round2.verdict);
-  check('R3 verdict valid', verdicts.includes(c.round3.verdict), c.round3.verdict);
-  check('R4 mostActive has trades', c.round4.mostActive?.trades >= 0);
-  check('R4 leastActive has return', typeof c.round4.leastActive?.returnPct === 'number');
-  check('R4 is directional type', c.round4.type === 'directional');
-  check('R5 is descriptive type', c.round5.type === 'descriptive');
-  check('R5 source is empty', !c.round5.source);
-  check('R5 labelled share present', typeof c.round5.labelledSharePct === 'number');
-  check('R5 buyer return present', typeof c.round5.nvdaBuyerAvgReturn === 'number');
-  check('baselines exist for all 5 rounds', [1, 2, 3, 4, 5].every((r) => c.baselines[r]));
+  check('comparison has 4 round cards', Array.isArray(c.rounds) && c.rounds.length === 4);
+  check('no legacy study round2 payload', c.round2 == null);
+  check('no legacy baselines map', c.baselines == null);
+  for (const r of c.rounds || []) {
+    check(
+      `R${r.round} has numeric baseline`,
+      typeof r.baseline === 'number',
+      String(r.baseline)
+    );
+    check(`R${r.round} has numeric value`, typeof r.value === 'number', String(r.value));
+    check(`R${r.round} has title`, typeof r.title === 'string' && r.title.length > 0);
+  }
+  const r3 = (c.rounds || []).find((r) => r.round === 3);
+  check(
+    'R3 labelled share at or above baseline when all traded labelled',
+    r3 && r3.value >= r3.baseline,
+    r3 ? `${r3.baseline} → ${r3.value}` : 'missing'
+  );
+  const r5 = (c.rounds || []).find((r) => r.round === 5);
+  check('R5 unit is percent', r5?.unit === '%');
 
   // ---- Recap ----
   console.log('\nPlayer recap');

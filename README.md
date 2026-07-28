@@ -1,6 +1,6 @@
 # Ticker — Behavioural Finance Trading Game
 
-Classroom demo: 3–6 students join from their phones, play 5 short trading rounds on a calm Wealthsimple-style UI, and see class results beside published FCA/OSC benchmarks on the presenter screen.
+Classroom demo: 3–6 students join from their phones, play 5 short trading rounds on a calm Wealthsimple-style UI, and see Round 1 baseline compared to each gamified round on the presenter summary screen.
 
 **Within-subject design:** everyone plays all 5 rounds. Round 1 is the neutral baseline. Each later round adds **exactly one** gamification mechanic.
 
@@ -110,10 +110,6 @@ On startup the server **validates**:
 - Rounds 1–4 matched on mean return and volatility (Round 5 NVDA exempt)
 - Round 5: both `trendingTag` and `leaderboard` flags, NVDA labelled
 
-### Benchmarks (offline)
-
-Edit [`config/benchmarks.js`](config/benchmarks.js). No network calls — the comparison screen works without internet.
-
 ### Design tokens
 
 All colours and type live in [`public/css/theme.css`](public/css/theme.css). Components should not hard-code colours.
@@ -123,7 +119,7 @@ All colours and type live in [`public/css/theme.css`](public/css/theme.css). Com
 1. Lobby — big lobby code + player grid → **Start Round 1**
 2. During a round — averages + control bar (Next Tick / End / Next / Reset). Tick counters stay on this screen only.
 3. Between rounds — visual share/split bars for that round’s story → **Next Round**
-4. After Round 5 — **Our class vs. the studies** (paired bars, per-card scaling) with a **Reset** button to return to lobby
+4. After Round 5 — **Baseline vs gamified rounds** (R1 vs R2–R5 metrics) with a **Reset** button to return to lobby
 
 Players land on a **personal recap** on their phones (`/recap`). Individual performance is never projected except the Round 4/5 leaderboard.
 
@@ -136,7 +132,7 @@ npm test              # verdict logic, CSS audit, full 5-round e2e, websocket sy
 npm run test:timing   # real-time buy-in and auto-tick check (~20s with 10s buy-in)
 ```
 
-`npm test` walks a complete game with 4 players: joins, whole-share buy/sell, all five rounds' cues, comparison verdicts, and recap.
+`npm test` walks a complete game with 4 players: joins, whole-share buy/sell, all five rounds' cues, baseline comparison payload, and recap.
 
 ## Data
 
@@ -150,7 +146,7 @@ Node.js + Express + WebSocket (`ws`), vanilla JS frontend, no build step. Player
 
 ## Limitations (say these out loud)
 
-- n is small (≈6) — verdicts bias toward **Inconclusive**; this is illustrative, not an inferential test
+- n is small (≈6) — class results are illustrative, not an inferential test
 - Round 3 tag is **config-static**, not live volume
 - Round 2 NVDA/SPCX paths are deliberately matched; the alert asymmetry is the manipulation
 - Round 5 uses a **fixed** NVDA pump-and-dump path (flat → spike → crash) plus dual cues (trending + leaderboard)

@@ -38,19 +38,20 @@ function r2(n) {
 }
 
 /** Ultra-calm bond drift — looks like a stable fund unit, not a stock. */
-const bondMoves = [0.2, -0.1, 0.25, -0.08, 0.18, 0.15, -0.12, 0.2, -0.08, 0.15];
+const bondMoves = [0.15, 0.12, -0.05, 0.22, 0.18, -0.1, 0.02, 0.2, -0.08, 0.14];
 
 /**
  * Round 1 — baseline
  * BOND calm/high, NVDA medium, SPCX cheap & jumpy. No mechanic flags.
+ * Paths use same-sign streaks and flat ticks (not metronome +/-).
  */
 const round1 = {
   concept: 'Deliberate decisions',
   flags: {},
   prices: {
     BOND: pathFromReturns(55.0, bondMoves),
-    NVDA: pathFromReturns(32.0, [1.6, -1.1, 1.5, -1.0, 1.2, -0.8, 1.1, 0.7, -0.7, 0.9]),
-    SPCX: pathFromReturns(8.5, [3.2, -2.6, 2.9, -2.4, 2.6, -2.1, 2.3, -1.9, 1.6, -1.2]),
+    NVDA: pathFromReturns(32.0, [1.2, 0.9, -0.2, -1.4, 0.6, 1.0, -0.1, 0.5, -1.0, 0.4]),
+    SPCX: pathFromReturns(8.5, [3.0, 1.6, -0.4, -2.8, 2.2, -0.8, -2.2, 1.4, 0.3, -1.8]),
   },
 };
 
@@ -59,13 +60,13 @@ const round1 = {
  * HARD REQUIREMENT: NVDA and SPCX move by identical % each tick (within 0.2pp).
  * Alert + flash fire for NVDA only; SPCX is the silent twin. BOND stays calm.
  */
-const matchedMoves = [2.8, -2.2, 2.5, -2.0, 1.5, -1.8, 2.2, -1.6, 1.6, -1.4];
+const matchedMoves = [2.4, 1.6, -0.3, -2.4, -1.2, 0.4, 2.2, 1.0, -1.8, -0.6];
 
 const round2 = {
   concept: 'Real-time information',
   flags: { realTimeAlert: true },
   prices: {
-    BOND: pathFromReturns(55.0, [0.18, -0.1, 0.22, -0.08, 0.16, 0.12, -0.1, 0.18, -0.08, 0.14]),
+    BOND: pathFromReturns(55.0, [0.12, 0.18, 0.05, -0.1, 0.2, 0.15, -0.08, 0.02, 0.16, -0.06]),
     NVDA: pathFromReturns(32.0, matchedMoves),
     SPCX: pathFromReturns(8.5, matchedMoves),
   },
@@ -80,10 +81,10 @@ const round3 = {
   flags: { trendingTag: true },
   labelledTicker: 'SPCX',
   prices: {
-    BOND: pathFromReturns(55.0, [0.22, -0.1, 0.28, -0.08, 0.2, 0.18, -0.1, 0.22, -0.08, 0.18]),
-    NVDA: pathFromReturns(32.0, [1.8, -0.7, 1.6, -0.6, 1.4, -0.5, 1.3, 0.8, 1.0, 0.7]),
+    BOND: pathFromReturns(55.0, [0.2, 0.1, 0.05, -0.08, 0.18, 0.22, -0.05, 0.15, 0.08, -0.1]),
+    NVDA: pathFromReturns(32.0, [0.5, 1.0, 0.8, -0.2, 0.4, -0.8, 0.9, 0.6, -0.1, 0.4]),
     // Labelled: still volatile but ends down — costly herding
-    SPCX: pathFromReturns(8.5, [2.2, -2.6, 2.0, -2.5, 2.1, -2.6, 1.8, -2.4, 1.6, -2.2]),
+    SPCX: pathFromReturns(8.5, [1.8, -0.5, -2.2, 0.4, -2.4, 1.4, -1.8, -0.3, -1.6, 1.0]),
   },
 };
 
@@ -95,9 +96,9 @@ const round4 = {
   concept: 'Social ranking',
   flags: { leaderboard: true },
   prices: {
-    BOND: pathFromReturns(55.0, [0.18, -0.12, 0.22, -0.1, 0.18, 0.12, -0.12, 0.16, -0.08, 0.16]),
-    NVDA: pathFromReturns(32.0, [1.7, -1.2, 1.5, -1.0, 1.1, 1.2, -0.8, 0.9, -0.7, 1.0]),
-    SPCX: pathFromReturns(8.5, [3.0, -2.5, 2.7, -2.3, 2.4, -2.0, 2.1, -1.8, 1.5, -1.1]),
+    BOND: pathFromReturns(55.0, [0.1, -0.05, 0.2, 0.15, 0.05, -0.12, 0.18, -0.02, 0.14, 0.1]),
+    NVDA: pathFromReturns(32.0, [1.1, 0.8, -0.2, -1.3, -0.6, 0.3, 1.2, 0.7, -0.9, 0.4]),
+    SPCX: pathFromReturns(8.5, [2.2, 1.8, -0.4, -2.6, -1.2, 0.3, 2.4, 1.0, -2.0, 0.5]),
   },
 };
 
@@ -111,10 +112,10 @@ const round5 = {
   flags: { trendingTag: true, leaderboard: true },
   labelledTicker: 'NVDA',
   prices: {
-    BOND: pathFromReturns(55.0, [0.15, -0.1, 0.2, -0.08, 0.16, 0.12, -0.1, 0.16, -0.08, 0.14]),
+    BOND: pathFromReturns(55.0, [0.14, 0.1, -0.04, 0.18, 0.12, -0.08, 0.03, 0.16, -0.06, 0.12]),
     // Flat 0–3, spike 4–6, crash 7–10
     NVDA: [32.0, 32.2, 32.1, 32.4, 46.0, 58.0, 67.0, 38.0, 29.5, 26.0, 25.5],
-    SPCX: pathFromReturns(8.5, [2.8, -2.4, 2.5, -2.2, 2.3, -2.0, 2.0, -1.7, 1.4, -1.0]),
+    SPCX: pathFromReturns(8.5, [2.4, 1.5, -0.4, -2.2, 1.8, -0.6, -2.0, 1.2, 0.3, -1.4]),
   },
 };
 
