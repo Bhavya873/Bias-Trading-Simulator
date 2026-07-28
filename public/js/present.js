@@ -121,46 +121,30 @@ function renderLobby() {
   const names = Object.values(state.players || {});
   const minP = state.demoMode ? 1 : 2;
   const canStart = names.length >= minP;
-  const url = state.lanUrl || location.origin;
+  const code = state.lobbyCode || '————';
 
   app.innerHTML = `
-    <div style="padding-top:16px">
-      <div class="wordmark" style="font-size:28px">Ticker</div>
-      <div class="sm text-2" style="margin-top:8px">Presenter · scan to join</div>
+    <div class="centered centered--present">
+      <div class="lobby-code-wrap">
+        <div class="label">Lobby code</div>
+        <div class="lobby-code" aria-label="Lobby code">${esc(code)}</div>
+      </div>
       ${
-        state.demoMode
-          ? '<div class="mechanic-chip" style="margin-top:12px">Demo mode — 1 player allowed</div>'
+        names.length
+          ? `<div class="player-grid">
+              ${names.map((p) => `<div class="player-grid__card">${esc(p.name)}</div>`).join('')}
+            </div>`
           : ''
       }
-      <div class="qr-wrap">
-        <img src="/api/qr?url=${encodeURIComponent(url)}" width="320" height="320" alt="Join QR code" />
-        <div class="lan-url">${esc(url)}</div>
-      </div>
-      <div class="label">Players (${names.length})</div>
-      <div class="player-grid">
-        ${
-          names.map((p) => `<div class="player-grid__card">${esc(p.name)}</div>`).join('') ||
-          '<div class="sm text-2">Waiting for joins…</div>'
-        }
-      </div>
-      <button type="button" class="btn btn--primary" id="start1" ${canStart ? '' : 'disabled'} style="max-width:320px">
+      <button type="button" class="btn btn--primary" id="start1" ${canStart ? '' : 'disabled'} style="max-width:280px;margin-top:8px">
         Start Round 1
       </button>
-      <div style="height:16px"></div>
-      <label class="sm text-2" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="demo-toggle" ${state.demoMode ? 'checked' : ''} />
-        Allow 1 player (rehearsal)
-      </label>
-      <div style="height:24px"></div>
-      <button type="button" class="btn btn--secondary" id="reset" style="max-width:200px">Reset</button>
+      <button type="button" class="btn btn--secondary" id="reset" style="max-width:160px;margin-top:16px">Reset</button>
     </div>
   `;
 
   app.querySelector('#start1')?.addEventListener('click', () =>
     post('/api/present/start-round', { round: 1 })
-  );
-  app.querySelector('#demo-toggle')?.addEventListener('change', (e) =>
-    post('/api/present/demo', { on: e.target.checked })
   );
   app.querySelector('#reset')?.addEventListener('click', () => {
     if (confirm('Reset the entire game and clear all players?')) {

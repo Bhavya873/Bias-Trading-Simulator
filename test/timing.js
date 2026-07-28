@@ -32,7 +32,8 @@ async function main() {
   console.log(`\nTiming check — ${BASE}\n`);
 
   await post('/api/present/reset', { demoMode: true });
-  const p = await post('/api/join', { name: 'Timer' });
+  const lobby = await get('/api/state');
+  const p = await post('/api/join', { name: 'Timer', code: lobby.lobbyCode });
 
   const cfg = await get('/api/state');
   const buyInMs = cfg.config.timings.buyInMs;

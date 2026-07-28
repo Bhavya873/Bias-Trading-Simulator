@@ -4,7 +4,6 @@ const http = require('http');
 const path = require('path');
 const os = require('os');
 const express = require('express');
-const QRCode = require('qrcode');
 const { WebSocketServer } = require('ws');
 const { createGame } = require('./lib/game');
 
@@ -54,7 +53,27 @@ function lanAddress() {
 }
 
 const lanIp = lanAddress();
-let lanUrl = `http://${lanIp}:${PORT}`;
+
+/**
+ * Public base URL for presenter / player links.
+ * Set PUBLIC_URL when hosting (e.g. https://ticker-xxx.up.railway.app).
+ * Also accepts common platform vars so you don't have to configure twice.
+ */
+function publicBaseUrl(port) {
+  const fromEnv =
+    process.env.PUBLIC_URL ||
+    process.env.RENDER_EXTERNAL_URL ||
+    (process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : '') ||
+    (process.env.FLY_APP_NAME
+      ? `https://${process.env.FLY_APP_NAME}.fly.dev`
+      : '');
+  if (fromEnv) return String(fromEnv).replace(/\/$/, '');
+  return `http://${lanIp}:${port}`;
+}
+
+let lanUrl = publicBaseUrl(PORT);
 game.setLanUrl(lanUrl);
 
 wss.on('connection', (ws) => {
@@ -85,27 +104,10 @@ function fail(res, err, code = 400) {
 
 app.get('/api/state', (_req, res) => ok(res, game.publicState()));
 
-/** Offline QR — generated locally, no external API */
-app.get('/api/qr', async (req, res) => {
-  try {
-    const text = String(req.query.url || lanUrl);
-    const png = await QRCode.toBuffer(text, {
-      type: 'png',
-      width: 320,
-      margin: 2,
-      errorCorrectionLevel: 'M',
-    });
-    res.setHeader('Content-Type', 'image/png');
-    res.send(png);
-  } catch (e) {
-    fail(res, e, 500);
-  }
-});
-
 app.post('/api/join', (req, res) => {
   try {
-    const { name, player_id } = req.body || {};
-    ok(res, game.join(name, player_id));
+    const { name, player_id, code } = req.body || {};
+    ok(res, game.join(name, player_id, code));
   } catch (e) {
     fail(res, e);
   }
@@ -214,29 +216,32 @@ app.get('/recap', (_req, res) => {
 });
 
 function banner(port) {
-  lanUrl = `http://${lanIp}:${port}`;
+  lanUrl = publicBaseUrl(port);
   game.setLanUrl(lanUrl);
 
   console.log('');
   console.log('  Ticker — behavioural finance trading game');
   console.log('  -----------------------------------------');
   console.log(`  Local:     http://127.0.0.1:${port}`);
-  console.log(`  LAN:       ${lanUrl}`);
+  console.log(`  Public:    ${lanUrl}`);
   console.log(`  Presenter: ${lanUrl}/present`);
   console.log(`  Players:   ${lanUrl}/`);
-  console.log('');
-  // Print all IPv4s so the right one is obvious on multi-homed laptops
-  const ifaces = os.networkInterfaces();
-  console.log('  All IPv4 addresses on this machine:');
-  for (const name of Object.keys(ifaces)) {
-    for (const iface of ifaces[name] || []) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        console.log(`    http://${iface.address}:${port}  (${name})`);
+  console.log(`  Lobby code:${game.publicState().lobbyCode}`);
+  if (!process.env.PUBLIC_URL && !process.env.RENDER_EXTERNAL_URL && !process.env.RAILWAY_PUBLIC_DOMAIN) {
+    console.log('');
+    console.log('  All IPv4 addresses on this machine:');
+    const ifaces = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+      for (const iface of ifaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          console.log(`    http://${iface.address}:${port}  (${name})`);
+        }
       }
     }
+    console.log('');
+    console.log('  Tip: campus Wi-Fi often blocks phones. Host online or use a laptop hotspot.');
+    console.log('  For hosting, set PUBLIC_URL=https://your-app.example.com');
   }
-  console.log('');
-  console.log('  Tip: if phones cannot connect, use a hotspot from this laptop.');
   console.log('');
 }
 

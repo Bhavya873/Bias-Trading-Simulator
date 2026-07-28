@@ -185,27 +185,51 @@ function renderJoin() {
       <div class="sm text-2" style="margin-top:8px">Behavioural finance experiment</div>
       <div style="height:48px"></div>
       <div style="width:100%;text-align:left">
-        <div class="label" style="margin-bottom:8px">Your name</div>
-        <input class="input" id="name" maxlength="20" autocapitalize="words" autocomplete="off" autofocus />
+        <div class="label" style="margin-bottom:8px">Lobby code</div>
+        <input class="input input--code" id="code" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" autofocus placeholder="••••" />
         <div style="height:16px"></div>
-        <button class="btn btn--primary" id="join" disabled>Join</button>
+        <div class="label" style="margin-bottom:8px">Your name</div>
+        <input class="input" id="name" maxlength="20" autocapitalize="words" autocomplete="off" />
+        <div style="height:16px"></div>
+        <button class="btn btn--primary" id="join" disabled>Join lobby</button>
       </div>
     </div>
   `;
-  const input = app.querySelector('#name');
+  const codeInput = app.querySelector('#code');
+  const nameInput = app.querySelector('#name');
   const btn = app.querySelector('#join');
   const sync = () => {
-    btn.disabled = input.value.trim().length < 2;
+    const codeOk = codeInput.value.trim().replace(/[^a-zA-Z0-9]/g, '').length >= 4;
+    const nameOk = nameInput.value.trim().length >= 2;
+    btn.disabled = !(codeOk && nameOk);
   };
-  input.addEventListener('input', sync);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !btn.disabled) btn.click();
+  codeInput.addEventListener('input', () => {
+    const start = codeInput.selectionStart;
+    const upper = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (codeInput.value !== upper) {
+      codeInput.value = upper;
+      codeInput.setSelectionRange(start, start);
+    }
+    sync();
+  });
+  nameInput.addEventListener('input', sync);
+  const tryJoin = () => {
+    if (!btn.disabled) btn.click();
+  };
+  codeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') nameInput.focus();
+  });
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryJoin();
   });
   btn.addEventListener('click', async () => {
     try {
       const res = await api('/api/join', {
         method: 'POST',
-        body: { name: input.value.trim() },
+        body: {
+          name: nameInput.value.trim(),
+          code: codeInput.value.trim(),
+        },
       });
       playerId = res.player_id;
       playerName = res.name;

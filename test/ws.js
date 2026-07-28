@@ -50,6 +50,7 @@ async function main() {
   console.log(`\nWebSocket check — ${WS_URL}\n`);
 
   await post('/api/present/reset', { demoMode: true });
+  const lobby = await fetch(BASE + '/api/state').then((r) => r.json());
 
   const phone = await openClient('phone');
   const presenter = await openClient('presenter');
@@ -59,9 +60,10 @@ async function main() {
   check('presenter gets snapshot on connect', presenter.received.length >= 1);
   check('snapshot is a state message', phone.received[0]?.type === 'state');
   check('snapshot has phase', phone.received[0]?.payload?.phase === 'lobby');
+  check('snapshot has lobby code', phone.received[0]?.payload?.lobbyCode === lobby.lobbyCode);
 
   const before = phone.received.length;
-  const p = await post('/api/join', { name: 'Wsy' });
+  const p = await post('/api/join', { name: 'Wsy', code: lobby.lobbyCode });
   await sleep(300);
   check('join broadcasts to phone', phone.received.length > before);
   check('join broadcasts to presenter', presenter.received.length > 1);

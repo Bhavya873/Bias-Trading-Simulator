@@ -1,2 +1,3 @@
-# QR codes are generated server-side at GET /api/qr (offline, no CDN).
-# This folder is reserved if you later swap in a client-side QR library.
+# Vendor notes
+
+No third-party browser bundles are required. Join uses an on-screen lobby code from the presenter.

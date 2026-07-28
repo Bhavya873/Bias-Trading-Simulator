@@ -16,13 +16,13 @@ Open the URLs printed in the terminal:
 | Role | URL |
 |------|-----|
 | Presenter (project this) | `http://<LAN-IP>:3000/present` |
-| Players (QR / phones) | `http://<LAN-IP>:3000/` |
+| Players | `http://<LAN-IP>:3000/` |
 
-Phones must be on the **same network** as the laptop. Campus Wi‑Fi often blocks device-to-device traffic — if joins fail, share a **hotspot from the presenter laptop**.
+Players open the player URL, enter the **lobby code** shown on the presenter screen, and type their name. Phones must reach the same host as the presenter — campus Wi‑Fi often blocks device-to-device traffic; if joins fail, share a **hotspot from the presenter laptop**, or deploy with a public `PUBLIC_URL`.
 
 ### Ports
 
-If port 3000 is busy, the server automatically tries 3001, 3002, … up to 3010 and prints the port it settled on. The QR code always encodes the live port, so just scan whatever is on screen.
+If port 3000 is busy, the server automatically tries 3001, 3002, … up to 3010 and prints the port it settled on. The lobby code and printed URLs always match the live port.
 
 To pin a specific port:
 
@@ -90,7 +90,7 @@ All colours and type live in [`public/css/theme.css`](public/css/theme.css). Com
 
 ## Presenter flow
 
-1. Lobby — QR + LAN URL + player grid → **Start Round 1**
+1. Lobby — big lobby code + URL + player grid → **Start Round 1**
 2. During a round — averages + control bar (Next Tick / End / Next / Reset). Tick counters stay on this screen only.
 3. Between rounds — summary vs Round 1 + round-specific panel → **Next Round**
 4. After Round 5 — **Our class vs. the studies** (paired bars, per-card scaling)
@@ -116,7 +116,7 @@ npm run test:timing   # real-time buy-in and auto-tick check (~20s with 10s buy-
 
 ## Stack
 
-Node.js + Express + WebSocket (`ws`), vanilla JS frontend, no build step. QR codes are generated on the server (`/api/qr`) so nothing depends on an external API.
+Node.js + Express + WebSocket (`ws`), vanilla JS frontend, no build step. Players join with a short lobby code shown on the presenter screen.
 
 ## Limitations (say these out loud)
 

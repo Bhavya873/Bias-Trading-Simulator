@@ -463,6 +463,12 @@ body {
   margin: 0 auto;
 }
 
+.centered--present {
+  max-width: 640px;
+  justify-content: center;
+  padding: 48px 32px;
+}
+
 .lobby-status {
   font-size: var(--fs-sm);
   color: var(--text-2);
@@ -849,27 +855,37 @@ body {
   font-weight: 500;
 }
 
-.qr-wrap {
+.lobby-code-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 24px 0;
+  margin: 0 0 40px;
+  text-align: center;
 }
 
-.qr-wrap canvas,
-.qr-wrap img {
-  width: 320px;
-  height: 320px;
-  background: #fff;
-  padding: 24px;
-}
-
-.lan-url {
-  margin-top: 16px;
-  font-size: var(--fs-lg);
-  font-weight: var(--fw-lg);
+.lobby-code {
+  font-size: clamp(56px, 14vw, 112px);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  line-height: 1.1;
+  margin: 12px 0 0;
+  padding-left: 0.28em;
   font-variant-numeric: tabular-nums;
-  letter-spacing: var(--ls-lg);
+  color: var(--text);
+}
+
+.centered--present .player-grid {
+  width: 100%;
+  margin: 0 0 32px;
+}
+
+.input--code {
+  text-align: center;
+  letter-spacing: 0.35em;
+  font-size: 28px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding-left: calc(16px + 0.35em);
 }
 
 .summary-table {

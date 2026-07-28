@@ -66,18 +66,28 @@ async function main() {
   check('resets to lobby', s.phase === 'lobby' && s.round === 0);
   check('no players after reset', Object.keys(s.players).length === 0);
   check('buy-in is 10s', s.config.timings.buyInMs === 10000, String(s.config.timings.buyInMs));
+  check('lobby code present', typeof s.lobbyCode === 'string' && s.lobbyCode.length === 4);
+  const code = s.lobbyCode;
 
   let rejected = false;
   try {
-    await post('/api/join', { name: 'X' });
+    await post('/api/join', { name: 'X', code });
   } catch (_) {
     rejected = true;
   }
   check('rejects 1-character name', rejected);
 
+  let badCode = false;
+  try {
+    await post('/api/join', { name: 'Ada', code: 'ZZZZ' === code ? 'YYYY' : 'ZZZZ' });
+  } catch (_) {
+    badCode = true;
+  }
+  check('rejects wrong lobby code', badCode);
+
   const names = ['Ada', 'Bo', 'Cy', 'Dee'];
   const players = [];
-  for (const n of names) players.push(await post('/api/join', { name: n }));
+  for (const n of names) players.push(await post('/api/join', { name: n, code }));
   check('4 players joined', players.length === 4);
 
   const rejoin = await post('/api/join', {
@@ -455,8 +465,8 @@ async function main() {
     const res = await fetch(BASE + p);
     check(`serves ${p}`, res.ok, `status ${res.status}`);
   }
-  const qr = await fetch(BASE + '/api/qr');
-  check('QR endpoint returns png', qr.ok && (qr.headers.get('content-type') || '').includes('image/png'));
+  const qrGone = await fetch(BASE + '/api/qr');
+  check('QR endpoint removed', qrGone.status === 404);
 
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed ? 1 : 0);
