@@ -8,12 +8,6 @@ import { fmtMoney, fmtPct, fmtChange, pctMove, sparklineSvg } from './format.js'
 import { renderAlertCue, flashNvdaPrice } from './mechanics/r2-alert.js';
 import { trendingPill } from './mechanics/r3-trending.js';
 import { renderLeaderboard } from './mechanics/r4-leaderboard.js';
-import {
-  pumpHeaderBits,
-  crowdLineHtml,
-  renderPumpNvdaCard,
-  wirePumpCard,
-} from './mechanics/r5-pump.js';
 
 const app = document.getElementById('app');
 
@@ -128,7 +122,6 @@ function route() {
       state.round,
       state.tick,
       state.pendingAlert?.alert_id || '',
-      (state.leaderboard || []).map((r) => r.id + r.returnPct).join(','),
       me?.cash,
       holdingsKey,
       me?.contract?.shares || 0,
@@ -171,7 +164,7 @@ function patchRoundChrome() {
       if (navigator.vibrate) navigator.vibrate(30);
     }
   }
-  if (state.round === 4) {
+  if (state.round === 4 || state.round === 5) {
     const cue = document.getElementById('cue-zone');
     if (cue) renderLeaderboard(cue, state, playerId);
   }
@@ -317,13 +310,8 @@ function renderRound() {
   const cueClass = `cue-zone--r${state.round}`;
   const phaseLabel =
     state.phase === 'buyin' ? buyInCountdownLabel() : 'Live';
-  const isPump = !!state.flags?.thePump;
-  const pumpBits = pumpHeaderBits(state, playerId);
-  const pumpAsset = state.pumpAsset || 'NVDA';
 
-  const assets = [...(state.assets || [])]
-    .filter((t) => !(isPump && t === pumpAsset))
-    .sort();
+  const assets = [...(state.assets || [])].sort();
   const rows = assets
     .map((t) => {
       const price = state.prices[t];
@@ -364,16 +352,12 @@ function renderRound() {
     })
     .join('');
 
-  const pumpCard = isPump ? renderPumpNvdaCard(state, playerId) : '';
-  const crowd = isPump ? crowdLineHtml(state) : '';
-
   app.innerHTML = `
     <header class="sticky-header">
       <span class="round-pill">Round ${state.round}</span>
-      <div class="sticky-header__center">${isPump ? pumpBits.pointsPill : ''}</div>
+      <div class="sticky-header__center"></div>
       <div class="sticky-header__right ${state.phase === 'buyin' ? '' : 'text-2'}" id="phase-ind">${phaseLabel}</div>
     </header>
-    ${pumpBits.push || ''}
     <div class="cue-zone ${cueClass}" id="cue-zone"></div>
     <div class="portfolio">
       <div class="label">Portfolio value</div>
@@ -381,30 +365,10 @@ function renderRound() {
       <div class="portfolio__change ${change.cls}">${change.text}</div>
       <div class="portfolio__cash">Cash ${fmtMoney(me.cash)}</div>
       <div class="portfolio__holdings sm text-2">${holdingsSummary(me)}</div>
-      ${pumpBits.streak || ''}
     </div>
-    ${crowd}
-    ${isPump ? '<div id="lb-pump" style="margin:12px 0"></div>' : ''}
     <div class="market-label label">Market</div>
-    <div id="asset-list">${pumpCard}${rows}</div>
-    <div id="motivation-root"></div>
+    <div id="asset-list">${rows}</div>
   `;
-
-  if (isPump) {
-    wirePumpCard(app, state, playerId, {
-      onDone: () => {
-        screen = '';
-        route();
-      },
-      onError: async () => {
-        screen = '';
-        route();
-      },
-      getPlayer: () => state.players[playerId],
-    });
-    const lb = app.querySelector('#lb-pump');
-    if (lb) renderLeaderboard(lb, state, playerId);
-  }
 
   const cue = app.querySelector('#cue-zone');
   if (state.round === 2) {
@@ -420,7 +384,7 @@ function renderRound() {
       flashNvdaPrice(app.querySelector('#row-NVDA'), state.pendingAlert.pct);
       if (navigator.vibrate) navigator.vibrate(30);
     }
-  } else if (state.round === 4) {
+  } else if (state.round === 4 || state.round === 5) {
     renderLeaderboard(cue, state, playerId);
   } else {
     cue.innerHTML = '';
@@ -466,7 +430,6 @@ function syncRoundKey() {
     state.round,
     state.tick,
     state.pendingAlert?.alert_id || '',
-    (state.leaderboard || []).map((r) => r.id + r.returnPct).join(','),
     me.cash,
     holdingsKey,
     me.contract?.shares || 0,

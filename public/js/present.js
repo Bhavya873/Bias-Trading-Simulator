@@ -49,7 +49,7 @@ function render() {
   wireControls();
   if (
     (state.phase === 'buyin' || state.phase === 'live') &&
-    state.round === 4
+    (state.round === 4 || state.round === 5)
   ) {
     const el = document.getElementById('lb');
     if (el) renderLeaderboard(el, state, null);
@@ -177,7 +177,7 @@ function livePanel() {
         <div class="hero-num" style="margin-top:8px">${state.tick}/${state.tickCount}</div>
       </div>
     </div>
-    ${state.round === 4 ? '<div id="lb"></div>' : ''}
+    ${state.round === 4 || state.round === 5 ? '<div id="lb"></div>' : ''}
   `;
 }
 
@@ -219,31 +219,21 @@ function betweenPanel() {
   } else if (state.round === 4) {
     visual = `<div id="lb-between" class="between-visual"></div>`;
   } else if (state.round === 5 && sp) {
-    const et = sp.entryTiming || {};
-    const mot = sp.motives || {};
-    const cost = sp.costOfChasing || {};
-    const del = sp.deliberation || {};
-    const bd = mot.breakdown || {};
-    const chaseTxt =
-      cost.chaseAvgReturn >= 0
-        ? `gained ${Number(cost.chaseAvgReturn).toFixed(1)}%`
-        : `lost ${Math.abs(Number(cost.chaseAvgReturn) || 0).toFixed(1)}%`;
+    const labelled = Number(sp.labelledSharePct) || 0;
+    const other = Math.max(0, 100 - labelled);
+    const buyerTxt =
+      sp.nvdaBuyerAvgReturn >= 0
+        ? `gained ${Number(sp.nvdaBuyerAvgReturn).toFixed(1)}%`
+        : `lost ${Math.abs(Number(sp.nvdaBuyerAvgReturn) || 0).toFixed(1)}%`;
     const otherTxt =
-      cost.otherAvgReturn >= 0
-        ? `gained ${Number(cost.otherAvgReturn).toFixed(1)}%`
-        : `lost ${Math.abs(Number(cost.otherAvgReturn) || 0).toFixed(1)}%`;
+      sp.otherAvgReturn >= 0
+        ? `gained ${Number(sp.otherAvgReturn).toFixed(1)}%`
+        : `lost ${Math.abs(Number(sp.otherAvgReturn) || 0).toFixed(1)}%`;
     visual = `
       <div class="between-visual">
-        <div class="xl" style="margin-bottom:16px">${Number(et.spikePct || 0).toFixed(0)}% of you bought during the spike</div>
-        ${shareBar('Pre-spike', et.preSpikePct, 'Spike', et.spikePct)}
-        <div class="sm text-2" style="margin-bottom:16px">Post-crash ${Number(et.postCrashPct || 0).toFixed(0)}%</div>
-        <div class="label" style="margin-bottom:12px">Motive</div>
-        ${shareBar('Investing-like', mot.investing, 'Speculation / gambling', mot.speculation)}
-        <div class="sm text-2" style="margin:8px 0 16px">
-          Undervalued ${bd.undervalued || 0} · Crowd ${bd.everyone || 0} · Points ${bd.points || 0} · Exciting ${bd.exciting || 0}
-        </div>
-        <div class="lg" style="margin-bottom:8px">Players who bought during the spike ${chaseTxt}. Everyone else ${otherTxt}.</div>
-        <div class="sm text-2">Spike median reaction ${fmtMs(del.medianSpikeBuyMs)} · Round 1 median first trade ${fmtMs(del.medianR1FirstTradeMs)}</div>
+        <div class="label" style="margin-bottom:12px">Live trade share</div>
+        ${shareBar(sp.labelledTicker || 'NVDA', labelled, 'Other', other)}
+        <div class="lg" style="margin-top:16px">Players who bought NVDA ${buyerTxt}. Everyone else ${otherTxt}.</div>
       </div>
     `;
   }
@@ -257,11 +247,6 @@ function betweenPanel() {
       </button>
     </div>
   `;
-}
-
-function fmtMs(ms) {
-  if (ms == null || Number.isNaN(ms)) return '—';
-  return `${Math.round(ms / 100) / 10}s`;
 }
 
 function esc(s) {

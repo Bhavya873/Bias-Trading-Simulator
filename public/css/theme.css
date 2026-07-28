@@ -408,8 +408,17 @@ body {
 }
 
 .cue-zone--r2 {
-  min-height: 56px;
-  padding-top: 12px;
+  position: sticky;
+  top: 56px; /* sit under .sticky-header */
+  z-index: 35;
+  min-height: 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--bg);
+}
+
+.cue-zone--r2:has(.alert-card) {
+  border-bottom: 1px solid var(--border);
 }
 
 .cue-zone--r3 {
@@ -424,9 +433,8 @@ body {
 }
 
 .cue-zone--r5 {
-  min-height: 0;
-  height: 0;
-  padding: 0;
+  min-height: 220px;
+  padding-top: 12px;
 }
 
 /* Portfolio */
@@ -730,110 +738,7 @@ body {
   border-color: var(--down);
 }
 
-/* Round 5 — The Pump */
-.pump-card {
-  margin: 0 20px 16px;
-  background: color-mix(in srgb, var(--game-blue) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--game-blue) 25%, transparent);
-  border-radius: 16px;
-  padding: 20px;
-}
-
-.pump-card__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.pump-card__ticker {
-  font-weight: 600;
-  font-size: var(--fs-lg);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.pump-card__price {
-  font-size: var(--fs-xl);
-  font-weight: 500;
-  margin-top: 8px;
-  font-variant-numeric: tabular-nums;
-}
-
-.pump-card__controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pump-card__controls .btn {
-  flex: 1;
-  font-size: var(--fs-sm);
-}
-
-.pump-btn {
-  /* alias for pump control buttons — audited class */
-}
-
-.pump-card__held {
-  text-align: center;
-  min-width: 56px;
-}
-
-.pump-crowd {
-  margin: 0 20px 12px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--trend) 10%, transparent);
-  color: var(--text);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-}
-
-.pump-points-pill {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--gold) 25%, transparent);
-  color: var(--text);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
-
-.pump-points-pill--idle {
-  opacity: 0.55;
-}
-
-.pump-push {
-  margin: 0 12px 8px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--hot) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--hot) 30%, transparent);
-  font-weight: 500;
-  animation: pumpSlide 400ms ease-out;
-}
-
-@keyframes pumpSlide {
-  from {
-    transform: translateY(-12px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.pump-motive-overlay .btn {
-  margin-bottom: 8px;
-  max-width: 320px;
-}
-
-/* Motivation overlay (R5) */
+/* Motivation overlay (legacy) */
 .motivation-overlay {
   position: fixed;
   inset: 0;
@@ -1018,6 +923,12 @@ body {
 .comparison-header {
   text-align: center;
   margin: 32px 0 40px;
+}
+
+.comparison-reset {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0 24px;
 }
 
 .comparison-card {

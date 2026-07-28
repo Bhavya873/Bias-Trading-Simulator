@@ -102,18 +102,17 @@ const round4 = {
 };
 
 /**
- * Round 5 — The Pump
- * NVDA is a scripted pump-and-dump. Crash timing is overridden server-side
- * after peak buy volume (see lib/game.js). BOND/SPCX stay calm fillers.
+ * Round 5 — Hot asset + rankings
+ * NVDA gets a fixed pump-and-dump path plus Round 3 trending + Round 4 leaderboard.
+ * Path is extreme by design; exempt from cross-round vol matching.
  */
 const round5 = {
-  concept: 'Investing vs. Speculation vs. Gambling',
-  flags: { thePump: true },
-  pumpAsset: 'NVDA',
-  crowdFloor: 0.8,
+  concept: 'Hot asset + rankings',
+  flags: { trendingTag: true, leaderboard: true },
+  labelledTicker: 'NVDA',
   prices: {
     BOND: pathFromReturns(55.0, [0.15, -0.1, 0.2, -0.08, 0.16, 0.12, -0.1, 0.16, -0.08, 0.14]),
-    // Fallback shape: flat 0–3, spike 4–6, crash 7–10 (overridden after peakBuyTick)
+    // Flat 0–3, spike 4–6, crash 7–10
     NVDA: [32.0, 32.2, 32.1, 32.4, 46.0, 58.0, 67.0, 38.0, 29.5, 26.0, 25.5],
     SPCX: pathFromReturns(8.5, [2.8, -2.4, 2.5, -2.2, 2.3, -2.0, 2.0, -1.7, 1.4, -1.0]),
   },
@@ -183,7 +182,6 @@ function validatePaths() {
 
   // Rounds 1–4 matched — Round 5 NVDA is extreme by design and excluded
   const profiles = [1, 2, 3, 4].map((n) => ({ n, ...roundProfile(n) }));
-  // Round 5 BOND/SPCX only for a soft sanity check is optional; skip NVDA entirely
   const roundReturns = profiles.map((p) => p.meanReturn);
   const vols = profiles.map((p) => p.meanVol);
   const spread = (a) => Math.max(...a) - Math.min(...a);
@@ -201,11 +199,14 @@ function validatePaths() {
     );
   }
 
-  if (!round5.flags?.thePump || round5.pumpAsset !== 'NVDA') {
-    errors.push('Round 5 must set flags.thePump and pumpAsset NVDA');
+  if (!round5.flags?.trendingTag || !round5.flags?.leaderboard) {
+    errors.push('Round 5 must set both trendingTag and leaderboard flags');
+  }
+  if (round5.labelledTicker !== 'NVDA') {
+    errors.push('Round 5 labelledTicker must be NVDA');
   }
   if (!Array.isArray(round5.prices.NVDA) || round5.prices.NVDA.length !== 11) {
-    errors.push('Round 5 NVDA fallback path must have 11 prices');
+    errors.push('Round 5 NVDA path must have 11 prices');
   }
 
   if (errors.length) {

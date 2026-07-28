@@ -22,6 +22,9 @@ export async function renderComparisonView(root, data) {
     ${cardR3(data.round3)}
     ${cardR4(data.round4)}
     ${cardR5(data.round5)}
+    <div class="comparison-reset">
+      <button type="button" class="btn btn--secondary" id="comparison-reset" style="max-width:200px">Reset</button>
+    </div>
   `;
 
   requestAnimationFrame(() => {
@@ -30,6 +33,20 @@ export async function renderComparisonView(root, data) {
         el.style.width = el.getAttribute('data-w');
       }, i * 100);
     });
+  });
+
+  root.querySelector('#comparison-reset')?.addEventListener('click', async () => {
+    if (!confirm('Reset the entire game and clear all players?')) return;
+    try {
+      const demo = new URLSearchParams(location.search).has('demo');
+      await fetch('/api/present/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demoMode: demo }),
+      });
+    } catch (e) {
+      alert(e.message || 'Reset failed');
+    }
   });
 }
 
@@ -131,36 +148,39 @@ function cardR4(r) {
 }
 
 function cardR5(r) {
-  const mot = r.motives || {};
-  const loss =
-    r.atTopAvgReturn != null && r.atTopAvgReturn < 0
-      ? Math.abs(r.atTopAvgReturn).toFixed(1)
-      : Number(r.atTopAvgReturn || 0).toFixed(1);
-  const lostWord = (r.atTopAvgReturn || 0) < 0 ? 'lost' : 'returned';
+  const labelled = Number(r.labelledSharePct) || 0;
+  const other = Math.max(0, 100 - labelled);
+  const buyerTxt =
+    (r.nvdaBuyerAvgReturn || 0) >= 0
+      ? `gained ${fmt(r.nvdaBuyerAvgReturn)}%`
+      : `lost ${fmt(Math.abs(r.nvdaBuyerAvgReturn || 0))}%`;
+  const otherTxt =
+    (r.otherAvgReturn || 0) >= 0
+      ? `gained ${fmt(r.otherAvgReturn)}%`
+      : `lost ${fmt(Math.abs(r.otherAvgReturn || 0))}%`;
   return `
     <div class="comparison-card">
       <div class="comparison-card__top">
         <span class="round-pill">Round 5</span>
-        <span class="lg">${esc(r.label || 'The Pump — Investing, Speculation, or Gambling?')}</span>
+        <span class="lg">${esc(r.label || 'Hot asset + rankings')}</span>
       </div>
-      ${shareBarHtml('Investing-like', mot.investing, 'Speculation / gambling', mot.speculation)}
+      ${shareBarHtml(r.labelledTicker || 'NVDA', labelled, 'Other', other)}
       <div class="sm text-2" style="margin-top:16px">
-        This mirrors FCA and OSC findings that engagement features increase risky, fast trading — here,
-        ${Number(r.atTopSocialPct || 0).toFixed(0)}% of the class bought at the top for social or excitement reasons
-        and ${lostWord} an average of ${loss}%.
+        Chasing the hot name draws engagement — players who bought NVDA ${buyerTxt};
+        everyone else ${otherTxt}.
       </div>
     </div>
   `;
 }
 
-function shareBarHtml(leftLabel, leftCount, rightLabel, rightCount) {
-  const l = Math.max(0, Number(leftCount) || 0);
-  const r = Math.max(0, Number(rightCount) || 0);
-  const total = l + r;
-  const lp = total ? (l / total) * 100 : 50;
-  const rp = total ? (r / total) * 100 : 50;
-  const lPct = total ? Math.round(lp) : 0;
-  const rPct = total ? Math.round(rp) : 0;
+function shareBarHtml(leftLabel, leftPct, rightLabel, rightPct) {
+  const lp = Math.max(0, Number(leftPct) || 0);
+  const rp = Math.max(0, Number(rightPct) || 0);
+  const total = lp + rp;
+  const lShare = total ? (lp / total) * 100 : 50;
+  const rShare = total ? (rp / total) * 100 : 50;
+  const lPct = total ? Math.round(lShare) : 0;
+  const rPct = total ? Math.round(rShare) : 0;
   return `
     <div class="share-chart">
       <div class="share-chart__legend">
@@ -168,8 +188,8 @@ function shareBarHtml(leftLabel, leftCount, rightLabel, rightCount) {
         <span><span class="share-dot share-dot--b"></span>${esc(rightLabel)} · ${rPct}%</span>
       </div>
       <div class="share-bar">
-        <div class="share-bar__seg share-bar__seg--a" style="width:${lp}%"></div>
-        <div class="share-bar__seg share-bar__seg--b" style="width:${rp}%"></div>
+        <div class="share-bar__seg share-bar__seg--a" style="width:${lShare}%"></div>
+        <div class="share-bar__seg share-bar__seg--b" style="width:${rShare}%"></div>
       </div>
     </div>
   `;

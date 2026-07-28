@@ -4,13 +4,25 @@ export function renderAlertCue(container, state, onDismiss) {
   const alert = state.pendingAlert;
   if (!alert || !state.flags?.realTimeAlert) {
     container.innerHTML = '';
+    delete container.dataset.alertId;
     return;
   }
+
   const sign = alert.pct > 0 ? '+' : '';
+  const text = `${alert.ticker} ${sign}${alert.pct.toFixed(1)}% this tick`;
+
+  // Same alert already mounted — update copy only (avoids flicker on trades)
+  if (container.dataset.alertId === alert.alert_id) {
+    const textEl = container.querySelector('.alert-card__text');
+    if (textEl) textEl.textContent = text;
+    return;
+  }
+
+  container.dataset.alertId = alert.alert_id;
   container.innerHTML = `
     <div class="alert-card" role="status">
       <span class="alert-card__icon">🔔</span>
-      <span class="alert-card__text">${alert.ticker} ${sign}${alert.pct.toFixed(1)}% this tick</span>
+      <span class="alert-card__text">${text}</span>
       <button type="button" class="alert-card__dismiss" aria-label="Dismiss">×</button>
     </div>
   `;

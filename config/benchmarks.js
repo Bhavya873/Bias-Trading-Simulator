@@ -37,7 +37,7 @@ module.exports = {
       'Households that traded most frequently earned significantly lower returns than the market.',
   },
   round5: {
-    label: 'The Pump — Investing, Speculation, or Gambling?',
+    label: 'Round 5 — Hot asset + rankings',
     source: '',
     type: 'descriptive',
   },

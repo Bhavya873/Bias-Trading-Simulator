@@ -45,7 +45,6 @@ Run the server from **either** Windows PowerShell or WSL, not both. With WSL's m
 ## Trading
 
 - Holdings are **whole shares**. Each `+` / `−` on a stock row buys or sells exactly 1 share.
-- Round 5 **The Pump** relabels NVDA controls to **Ape In** / **Cash Out** and stacks FOMO cues; still whole shares.
 
 Sparklines of the **current round's** price history sit beside every ticker in all five rounds. Tick counts are shown only on the presenter view — players see a buy-in countdown, then `Live`.
 
@@ -57,7 +56,7 @@ Sparklines of the **current round's** price history sit beside every ticker in a
 | 2 | `realTimeAlert` | NVDA alert + flash each tick; SPCX silent twin (matched %) |
 | 3 | `trendingTag` | Static "TRENDING" pill on SPCX |
 | 4 | `leaderboard` | Live leaderboard only |
-| 5 | `thePump` | NVDA scripted pump-and-dump: hot badge + social ticker + leaderboard + points/streak + FOMO push, crash triggered right after peak buy-in, motivation prompt on every buy |
+| 5 | `trendingTag` + `leaderboard` | NVDA fixed pump-and-dump path + TRENDING pill + live leaderboard |
 
 ## Editing the experiment
 
@@ -71,13 +70,14 @@ Edit [`config/rounds.js`](config/rounds.js):
 - `timings.tickCount` — live ticks (default 10)
 - `rounds[n].prices` — 11 values per asset (tick 0…10)
 - `rounds[3].labelledTicker` — Round 3 trending tag target (default `SPCX`)
-- `rounds[5].pumpAsset` / `crowdFloor` / NVDA fallback path — The Pump
+- `rounds[5].labelledTicker` — Round 5 trending tag (default `NVDA`); fixed NVDA spike→crash path
 
 On startup the server **validates**:
 
 - Round 2: NVDA and SPCX % moves match within 0.2pp each tick
 - Round 3: labelled ticker finishes below both other assets
 - Rounds 1–4 matched on mean return and volatility (Round 5 NVDA exempt)
+- Round 5: both `trendingTag` and `leaderboard` flags, NVDA labelled
 
 ### Benchmarks (offline)
 
@@ -92,9 +92,9 @@ All colours and type live in [`public/css/theme.css`](public/css/theme.css). Com
 1. Lobby — big lobby code + player grid → **Start Round 1**
 2. During a round — averages + control bar (Next Tick / End / Next / Reset). Tick counters stay on this screen only.
 3. Between rounds — visual share/split bars for that round’s story → **Next Round**
-4. After Round 5 — **Our class vs. the studies** (paired bars, per-card scaling)
+4. After Round 5 — **Our class vs. the studies** (paired bars, per-card scaling) with a **Reset** button to return to lobby
 
-Players land on a **personal recap** on their phones (`/recap`). Individual performance is never projected except the Round 4 leaderboard.
+Players land on a **personal recap** on their phones (`/recap`). Individual performance is never projected except the Round 4/5 leaderboard.
 
 ## Tests
 
@@ -105,7 +105,7 @@ npm test              # verdict logic, CSS audit, full 5-round e2e, websocket sy
 npm run test:timing   # real-time buy-in and auto-tick check (~20s with 10s buy-in)
 ```
 
-`npm test` walks a complete game with 4 players: joins, whole-share buy/sell, all five mechanics, contract settlement, motivation prompt, comparison verdicts, and recap.
+`npm test` walks a complete game with 4 players: joins, whole-share buy/sell, all five rounds' cues, comparison verdicts, and recap.
 
 ## Data
 
@@ -122,5 +122,5 @@ Node.js + Express + WebSocket (`ws`), vanilla JS frontend, no build step. Player
 - n is small (≈6) — verdicts bias toward **Inconclusive**; this is illustrative, not an inferential test
 - Round 3 tag is **config-static**, not live volume
 - Round 2 NVDA/SPCX paths are deliberately matched; the alert asymmetry is the manipulation
-- Round 5's crash timing is server-triggered off peak buy volume, not fixed to a tick — this guarantees the crash follows FOMO buying but means exact tick timing varies run to run
+- Round 5 uses a **fixed** NVDA pump-and-dump path (flat → spike → crash) plus dual cues (trending + leaderboard)
 - Sparklines appear in every round (not Round-1-only), so the baseline is no longer chart-free
