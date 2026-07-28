@@ -37,7 +37,7 @@ module.exports = {
       'Households that traded most frequently earned significantly lower returns than the market.',
   },
   round5: {
-    label: 'Investing vs. speculation vs. gambling motivation',
+    label: 'The Pump — Investing, Speculation, or Gambling?',
     source: '',
     type: 'descriptive',
   },

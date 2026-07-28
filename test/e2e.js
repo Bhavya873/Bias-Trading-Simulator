@@ -322,83 +322,65 @@ async function main() {
   await post('/api/present/end-round');
 
   // ---- Round 5 ----
-  console.log('\nRound 5 — predictionContract');
+  console.log('\nRound 5 — thePump');
   await post('/api/present/next-round');
   s = await get('/api/state');
-  check('R5 flag is predictionContract only', s.flags.predictionContract === true && Object.keys(s.flags).length === 1);
-  check('contract exposed with odds', !!s.contract && s.contract.yesCents > 0);
-  check('yes + no = 100 cents', s.contract.yesCents + s.contract.noCents === 100);
+  check('R5 flag is thePump only', s.flags.thePump === true && Object.keys(s.flags).length === 1);
+  check('pump state exposed', !!s.pump && s.pump.asset === 'NVDA');
+  check('no contract on R5', s.contract == null);
   check('sparklines available in R5', !!s.priceHistory);
 
-  const beforeCash = s.players[players[0].player_id].cash;
-  const yesCost = s.contract.yesCents / 100;
-  await post('/api/contract', {
+  // Flat ticks then spike buys to create peakBuyTick
+  await post('/api/present/next-tick'); // buy-in → live tick 0
+  // Advance through pre-spike with light volume so peak lands in the spike window
+  await post('/api/trade', {
     player_id: players[0].player_id,
-    side: 'yes',
-    contracts: 2,
+    ticker: 'NVDA',
+    side: 'buy',
+    shares: 1,
+    motive: "I think it's undervalued",
   });
   s = await get('/api/state');
-  check(
-    'contract stake deducts cash',
-    Math.abs(s.players[players[0].player_id].cash - (beforeCash - 2 * yesCost)) < 0.02
-  );
-  check('contract position recorded', s.players[players[0].player_id].contract?.side === 'yes');
-  check('contract count is 2', s.players[players[0].player_id].contract?.shares === 2);
+  check('NVDA buy deducts cash', s.players[players[0].player_id].cash < 100);
+  check('pump points awarded', s.players[players[0].player_id].pumpPoints >= 10);
 
-  let oppositeBlocked = false;
-  try {
-    await post('/api/contract', {
-      player_id: players[0].player_id,
-      side: 'no',
-      contracts: 1,
+  for (let i = 0; i < 4; i++) await post('/api/present/next-tick');
+  s = await get('/api/state');
+  check('reached spike tick 4', s.tick === 4, `tick=${s.tick}`);
+  check('push fires at tick 4', s.pump.pushActive === true);
+
+  const priceBeforePileIn = s.prices.NVDA;
+  for (const p of players) {
+    await post('/api/trade', {
+      player_id: p.player_id,
+      ticker: 'NVDA',
+      side: 'buy',
+      shares: 1,
+      motive: 'Everyone else is buying',
     });
-  } catch (_) {
-    oppositeBlocked = true;
   }
-  check('blocks opposite contract side', oppositeBlocked);
-
   await post('/api/present/next-tick');
-  await post('/api/contract', {
-    player_id: players[1].player_id,
-    side: 'no',
-    contracts: 1,
-  });
-  await buy(players[2].player_id, 'BOND', 1);
-
-  await post('/api/present/end-round');
   s = await get('/api/state');
-  check('R5 end enters motivation phase', s.phase === 'motivation');
-  check('contracts settled on round end', Object.values(s.players).every((p) => !p.contract));
+  check('peak buy tick recorded', s.pump.peakBuyTick != null, String(s.pump.peakBuyTick));
+  check(
+    'dynamic crash after peak',
+    s.prices.NVDA < priceBeforePileIn * 0.7,
+    `price=${s.prices.NVDA} before=${priceBeforePileIn} peak=${s.pump.peakBuyTick}`
+  );
 
-  await post('/api/motivation', {
-    player_id: players[0].player_id,
-    answer: 'I had a view on the outcome',
-  });
-  await post('/api/motivation', {
-    player_id: players[1].player_id,
-    answer: 'It seemed exciting',
-  });
-  await post('/api/motivation', {
-    player_id: players[2].player_id,
-    answer: "I didn't trade it",
-  });
-  s = await get('/api/state');
-  check('stays in motivation until all answer', s.phase === 'motivation');
-
-  await post('/api/motivation', {
-    player_id: players[3].player_id,
-    answer: "I didn't trade it",
-  });
-  s = await get('/api/state');
-  check('advances once everyone answers', s.phase === 'between');
-
-  let badAnswer = false;
+  let badMotive = false;
   try {
     await post('/api/motivation', { player_id: players[0].player_id, answer: 'nonsense' });
   } catch (_) {
-    badAnswer = true;
+    badMotive = true;
   }
-  check('rejects invalid motivation answer', badAnswer);
+  check('rejects invalid pump motive', badMotive);
+
+  await post('/api/present/end-round');
+  s = await get('/api/state');
+  check('R5 ends in between (no motivation phase)', s.phase === 'between');
+  check('pump between panel has entry timing', !!s.betweenSummary?.specific?.entryTiming);
+  check('pump between panel has motives', !!s.betweenSummary?.specific?.motives);
 
   // ---- Comparison ----
   console.log('\nComparison screen');
@@ -412,31 +394,26 @@ async function main() {
   check('R3 benchmark is OSC 14%', c.round3.value === 14);
   check('R2 class value computed', typeof c.round2.classValue === 'number');
   check('R3 lift positive (all traded labelled)', c.round3.classValue > 0, String(c.round3.classValue));
-  const verdicts = [
-    'Directionally consistent',
-    'Directionally inconsistent',
-    'Inconclusive (n too small)',
-  ];
+  const verdicts = ['Directionally consistent', 'Inconclusive (n too small)'];
   check('R2 verdict valid', verdicts.includes(c.round2.verdict), c.round2.verdict);
   check('R3 verdict valid', verdicts.includes(c.round3.verdict), c.round3.verdict);
-  check('R4 return ranks within range', c.round4.mostActiveReturnRank >= 1 && c.round4.mostActiveReturnRank <= 4);
+  check('R4 mostActive has trades', c.round4.mostActive?.trades >= 0);
+  check('R4 leastActive has return', typeof c.round4.leastActive?.returnPct === 'number');
   check('R4 is directional type', c.round4.type === 'directional');
   check('R5 is descriptive type', c.round5.type === 'descriptive');
   check('R5 source is empty', !c.round5.source);
-  const m = c.round5.motivations;
-  check('motivations total = n', m.view + m.exciting + m.didnt + m.none === 4, JSON.stringify(m));
-  check('contract volume recorded', c.round5.contractVol > 0, String(c.round5.contractVol));
+  check('R5 motive split present', c.round5.motives?.speculation >= 0);
+  check('R5 peakBuyTick in comparison', c.round5.peakBuyTick != null || c.round5.buyerCount > 0);
   check('baselines exist for all 5 rounds', [1, 2, 3, 4, 5].every((r) => c.baselines[r]));
 
   // ---- Recap ----
   console.log('\nPlayer recap');
   const recap = await get(`/api/recap/${players[0].player_id}`);
   check('recap has 5 rounds', recap.rounds.length === 5);
-  check('recap rank in range', recap.rank >= 1 && recap.rank <= 4);
+  check('recap is personal (no rank)', recap.rank == null);
   check('recap R1 trade count = 4', recap.rounds[0].liveTrades === 4);
-  check('recap R4 multiple computed', recap.rounds[3].vsR1 !== undefined);
-  check('recap has class averages', !!recap.classAvg[1]);
-  check('recap callouts are strings', recap.callouts.every((x) => typeof x === 'string'));
+  check('recap has pump line', typeof recap.pumpLine === 'string' && recap.pumpLine.includes('NVDA'));
+  check('recap has no classAvg', recap.classAvg == null);
 
   // ---- Export routes removed ----
   console.log('\nExports removed');
@@ -463,6 +440,7 @@ async function main() {
     '/js/mechanics/r3-trending.js',
     '/js/mechanics/r4-leaderboard.js',
     '/js/mechanics/r5-contract.js',
+    '/js/mechanics/r5-pump.js',
   ]) {
     const res = await fetch(BASE + p);
     check(`serves ${p}`, res.ok, `status ${res.status}`);

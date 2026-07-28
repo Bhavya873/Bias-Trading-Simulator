@@ -36,7 +36,6 @@ export async function renderComparisonView(root, data) {
 function verdictChip(v) {
   let cls = 'verdict-chip--na';
   if (v === 'Directionally consistent') cls = 'verdict-chip--ok';
-  if (v === 'Directionally inconsistent') cls = 'verdict-chip--bad';
   return `<span class="verdict-chip ${cls}">${esc(v)}</span>`;
 }
 
@@ -99,6 +98,22 @@ function cardR3(r) {
 }
 
 function cardR4(r) {
+  const most = r.mostActive;
+  const least = r.leastActive;
+  const block = (title, person) => {
+    if (!person) {
+      return `<div class="rank-block"><div class="label">${esc(title)}</div><div class="xl" style="margin-top:8px">—</div></div>`;
+    }
+    const cls = person.returnPct > 0 ? 'up' : person.returnPct < 0 ? 'down' : '';
+    return `
+      <div class="rank-block">
+        <div class="label">${esc(title)}</div>
+        <div class="lg" style="margin-top:8px">${esc(person.name)}</div>
+        <div class="sm text-2" style="margin-top:8px">${person.trades} trades</div>
+        <div class="xl ${cls}" style="margin-top:4px">${fmt(person.returnPct)}%</div>
+      </div>
+    `;
+  };
   return `
     <div class="comparison-card">
       <div class="comparison-card__top">
@@ -107,14 +122,8 @@ function cardR4(r) {
         ${sourceLine(r.source)}
       </div>
       <div class="rank-blocks">
-        <div class="rank-block">
-          <div class="label">Most active</div>
-          <div class="xl" style="margin-top:8px">#${r.mostActiveReturnRank ?? '—'} of ${r.n}</div>
-        </div>
-        <div class="rank-block">
-          <div class="label">Least active</div>
-          <div class="xl" style="margin-top:8px">#${r.leastActiveReturnRank ?? '—'} of ${r.n}</div>
-        </div>
+        ${block('Most trades', most)}
+        ${block('Least trades', least)}
       </div>
       <div class="verdict-row">${verdictChip(r.verdict)}</div>
     </div>
@@ -122,43 +131,45 @@ function cardR4(r) {
 }
 
 function cardR5(r) {
-  const m = r.motivations || {};
-  const total = (m.view || 0) + (m.exciting || 0) + (m.didnt || 0) + (m.none || 0) || 1;
-  const seg = (count, label) => {
-    const pct = (count / total) * 100;
-    if (pct <= 0) return '';
-    return `<div class="stacked-bar__seg" style="width:${pct}%" title="${label}">${count} · ${Math.round(pct)}%</div>`;
-  };
-
-  const eq = Number(r.equityVol) || 0;
-  const ct = Number(r.contractVol) || 0;
-  const max = Math.max(eq, ct, 0.0001);
-
+  const mot = r.motives || {};
+  const loss =
+    r.atTopAvgReturn != null && r.atTopAvgReturn < 0
+      ? Math.abs(r.atTopAvgReturn).toFixed(1)
+      : Number(r.atTopAvgReturn || 0).toFixed(1);
+  const lostWord = (r.atTopAvgReturn || 0) < 0 ? 'lost' : 'returned';
   return `
     <div class="comparison-card">
       <div class="comparison-card__top">
         <span class="round-pill">Round 5</span>
-        <span class="lg">${esc(r.label)}</span>
+        <span class="lg">${esc(r.label || 'The Pump — Investing, Speculation, or Gambling?')}</span>
       </div>
-      <div class="label" style="margin-bottom:8px">Motivation</div>
-      <div class="stacked-bar">
-        ${seg(m.view, 'View')}
-        ${seg(m.exciting, 'Exciting')}
-        ${seg(m.didnt, "Didn't trade")}
-        ${seg(m.none, 'No response')}
+      ${shareBarHtml('Investing-like', mot.investing, 'Speculation / gambling', mot.speculation)}
+      <div class="sm text-2" style="margin-top:16px">
+        This mirrors FCA and OSC findings that engagement features increase risky, fast trading — here,
+        ${Number(r.atTopSocialPct || 0).toFixed(0)}% of the class bought at the top for social or excitement reasons
+        and ${lostWord} an average of ${loss}%.
       </div>
-      <div class="label" style="margin:16px 0 8px">Contract vs equity volume</div>
-      <div class="bar-pair">
-        <div class="bar-pair__label">Contract</div>
-        <div class="bar-track">
-          <div class="bar-fill bar-fill--class-only" data-w="${(ct / max) * 100}%" style="width:0">$${ct.toFixed(0)}</div>
-        </div>
+    </div>
+  `;
+}
+
+function shareBarHtml(leftLabel, leftCount, rightLabel, rightCount) {
+  const l = Math.max(0, Number(leftCount) || 0);
+  const r = Math.max(0, Number(rightCount) || 0);
+  const total = l + r;
+  const lp = total ? (l / total) * 100 : 50;
+  const rp = total ? (r / total) * 100 : 50;
+  const lPct = total ? Math.round(lp) : 0;
+  const rPct = total ? Math.round(rp) : 0;
+  return `
+    <div class="share-chart">
+      <div class="share-chart__legend">
+        <span><span class="share-dot share-dot--a"></span>${esc(leftLabel)} · ${lPct}%</span>
+        <span><span class="share-dot share-dot--b"></span>${esc(rightLabel)} · ${rPct}%</span>
       </div>
-      <div class="bar-pair">
-        <div class="bar-pair__label">Equity</div>
-        <div class="bar-track">
-          <div class="bar-fill bar-fill--class-only" data-w="${(eq / max) * 100}%" style="width:0">$${eq.toFixed(0)}</div>
-        </div>
+      <div class="share-bar">
+        <div class="share-bar__seg share-bar__seg--a" style="width:${lp}%"></div>
+        <div class="share-bar__seg share-bar__seg--b" style="width:${rp}%"></div>
       </div>
     </div>
   `;

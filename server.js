@@ -121,14 +121,6 @@ app.post('/api/trade', (req, res) => {
   }
 });
 
-app.post('/api/contract', (req, res) => {
-  try {
-    ok(res, game.tradeContract(req.body || {}));
-  } catch (e) {
-    fail(res, e);
-  }
-});
-
 app.post('/api/motivation', (req, res) => {
   try {
     const { player_id, answer } = req.body || {};

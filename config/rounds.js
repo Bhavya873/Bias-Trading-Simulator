@@ -102,18 +102,19 @@ const round4 = {
 };
 
 /**
- * Round 5 — prediction contract
- * targetTicker odds path drives contract cents. NVDA closes up vs tick 0.
+ * Round 5 — The Pump
+ * NVDA is a scripted pump-and-dump. Crash timing is overridden server-side
+ * after peak buy volume (see lib/game.js). BOND/SPCX stay calm fillers.
  */
 const round5 = {
-  concept: 'Odds and payouts',
-  flags: { predictionContract: true },
-  targetTicker: 'NVDA',
-  oddsYesCents: [55, 62, 48, 70, 40, 65, 35, 58, 45, 72, 50],
+  concept: 'Investing vs. Speculation vs. Gambling',
+  flags: { thePump: true },
+  pumpAsset: 'NVDA',
+  crowdFloor: 0.8,
   prices: {
     BOND: pathFromReturns(55.0, [0.15, -0.1, 0.2, -0.08, 0.16, 0.12, -0.1, 0.16, -0.08, 0.14]),
-    // Closes up vs tick 0 so YES settles at 100
-    NVDA: pathFromReturns(32.0, [1.5, -1.8, 2.2, -1.5, 1.8, -2.0, 2.5, -1.2, 1.0, 0.8]),
+    // Fallback shape: flat 0–3, spike 4–6, crash 7–10 (overridden after peakBuyTick)
+    NVDA: [32.0, 32.2, 32.1, 32.4, 46.0, 58.0, 67.0, 38.0, 29.5, 26.0, 25.5],
     SPCX: pathFromReturns(8.5, [2.8, -2.4, 2.5, -2.2, 2.3, -2.0, 2.0, -1.7, 1.4, -1.0]),
   },
 };
@@ -133,11 +134,12 @@ function meanAbsMovePct(path) {
   return sum / (path.length - 1);
 }
 
-function roundProfile(roundNum) {
+function roundProfile(roundNum, excludeTickers = []) {
   const prices = rounds[roundNum].prices;
-  const rets = ASSETS.map((t) => totalReturnPct(prices[t]));
-  const vols = ASSETS.map((t) => meanAbsMovePct(prices[t]));
-  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const assets = ASSETS.filter((t) => !excludeTickers.includes(t));
+  const rets = assets.map((t) => totalReturnPct(prices[t]));
+  const vols = assets.map((t) => meanAbsMovePct(prices[t]));
+  const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
   return { meanReturn: avg(rets), meanVol: avg(vols) };
 }
 
@@ -145,7 +147,8 @@ function roundProfile(roundNum) {
  * Boot-time validation. Fails loudly before class rather than mid-demo:
  *  - R2 NVDA/SPCX matched movers within 0.2pp
  *  - R3 labelled ticker below both unlabelled assets
- *  - all rounds structurally matched on return and volatility
+ *  - Rounds 1–4 structurally matched on return and volatility
+ *  - Round 5 NVDA is exempt (deliberate pump-and-dump extremes)
  */
 function validatePaths() {
   const errors = [];
@@ -178,9 +181,9 @@ function validatePaths() {
     );
   }
 
-  // All rounds structurally matched — comparisons vs Round 1 are only fair
-  // if the market itself is roughly the same difficulty each round.
-  const profiles = [1, 2, 3, 4, 5].map((n) => ({ n, ...roundProfile(n) }));
+  // Rounds 1–4 matched — Round 5 NVDA is extreme by design and excluded
+  const profiles = [1, 2, 3, 4].map((n) => ({ n, ...roundProfile(n) }));
+  // Round 5 BOND/SPCX only for a soft sanity check is optional; skip NVDA entirely
   const roundReturns = profiles.map((p) => p.meanReturn);
   const vols = profiles.map((p) => p.meanVol);
   const spread = (a) => Math.max(...a) - Math.min(...a);
@@ -198,10 +201,11 @@ function validatePaths() {
     );
   }
 
-  // R5 contract must be able to settle — target needs a defined direction
-  const t5 = rounds[5].prices[rounds[5].targetTicker];
-  if (t5[t5.length - 1] === t5[0]) {
-    errors.push(`R5 target ${rounds[5].targetTicker} closes exactly flat — contract cannot settle`);
+  if (!round5.flags?.thePump || round5.pumpAsset !== 'NVDA') {
+    errors.push('Round 5 must set flags.thePump and pumpAsset NVDA');
+  }
+  if (!Array.isArray(round5.prices.NVDA) || round5.prices.NVDA.length !== 11) {
+    errors.push('Round 5 NVDA fallback path must have 11 prices');
   }
 
   if (errors.length) {

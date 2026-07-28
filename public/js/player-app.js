@@ -8,7 +8,12 @@ import { fmtMoney, fmtPct, fmtChange, pctMove, sparklineSvg } from './format.js'
 import { renderAlertCue, flashNvdaPrice } from './mechanics/r2-alert.js';
 import { trendingPill } from './mechanics/r3-trending.js';
 import { renderLeaderboard } from './mechanics/r4-leaderboard.js';
-import { renderContract, renderMotivation } from './mechanics/r5-contract.js';
+import {
+  pumpHeaderBits,
+  crowdLineHtml,
+  renderPumpNvdaCard,
+  wirePumpCard,
+} from './mechanics/r5-pump.js';
 
 const app = document.getElementById('app');
 
@@ -93,11 +98,8 @@ function route() {
   }
 
   if (state.phase === 'motivation') {
-    if (!motivationShown) {
-      motivationShown = true;
-      lastRoundKey = '';
-      renderMotivationOverlay();
-    }
+    // Legacy phase — send players to between wait
+    renderBetween();
     return;
   }
 
@@ -313,11 +315,15 @@ function renderRound() {
 
   const change = fmtChange(me.portfolioValue - 100, me.returnPct);
   const cueClass = `cue-zone--r${state.round}`;
-  // Players never see tick counts — only a countdown in buy-in, or "Live"
   const phaseLabel =
     state.phase === 'buyin' ? buyInCountdownLabel() : 'Live';
+  const isPump = !!state.flags?.thePump;
+  const pumpBits = pumpHeaderBits(state, playerId);
+  const pumpAsset = state.pumpAsset || 'NVDA';
 
-  const assets = [...(state.assets || [])].sort();
+  const assets = [...(state.assets || [])]
+    .filter((t) => !(isPump && t === pumpAsset))
+    .sort();
   const rows = assets
     .map((t) => {
       const price = state.prices[t];
@@ -358,12 +364,16 @@ function renderRound() {
     })
     .join('');
 
+  const pumpCard = isPump ? renderPumpNvdaCard(state, playerId) : '';
+  const crowd = isPump ? crowdLineHtml(state) : '';
+
   app.innerHTML = `
     <header class="sticky-header">
       <span class="round-pill">Round ${state.round}</span>
-      <div class="sticky-header__center"></div>
+      <div class="sticky-header__center">${isPump ? pumpBits.pointsPill : ''}</div>
       <div class="sticky-header__right ${state.phase === 'buyin' ? '' : 'text-2'}" id="phase-ind">${phaseLabel}</div>
     </header>
+    ${pumpBits.push || ''}
     <div class="cue-zone ${cueClass}" id="cue-zone"></div>
     <div class="portfolio">
       <div class="label">Portfolio value</div>
@@ -371,12 +381,30 @@ function renderRound() {
       <div class="portfolio__change ${change.cls}">${change.text}</div>
       <div class="portfolio__cash">Cash ${fmtMoney(me.cash)}</div>
       <div class="portfolio__holdings sm text-2">${holdingsSummary(me)}</div>
+      ${pumpBits.streak || ''}
     </div>
+    ${crowd}
+    ${isPump ? '<div id="lb-pump" style="margin:12px 0"></div>' : ''}
     <div class="market-label label">Market</div>
-    <div id="asset-list">${rows}</div>
-    <div id="contract-slot"></div>
+    <div id="asset-list">${pumpCard}${rows}</div>
     <div id="motivation-root"></div>
   `;
+
+  if (isPump) {
+    wirePumpCard(app, state, playerId, {
+      onDone: () => {
+        screen = '';
+        route();
+      },
+      onError: async () => {
+        screen = '';
+        route();
+      },
+      getPlayer: () => state.players[playerId],
+    });
+    const lb = app.querySelector('#lb-pump');
+    if (lb) renderLeaderboard(lb, state, playerId);
+  }
 
   const cue = app.querySelector('#cue-zone');
   if (state.round === 2) {
@@ -398,37 +426,11 @@ function renderRound() {
     cue.innerHTML = '';
   }
 
-  if (state.round === 5) {
-    mountContract();
-  }
-
   app.querySelectorAll('.stepper__btn').forEach((btn) => {
     btn.addEventListener('click', () => onStep(btn));
   });
 
   startPhaseClock();
-}
-
-function mountContract() {
-  const slot = app.querySelector('#contract-slot');
-  if (!slot) return;
-  renderContract(slot, state, playerId, {
-    onOptimistic: () => {
-      recomputeMyPortfolio();
-      patchTradeUI();
-      syncRoundKey();
-      mountContract();
-    },
-    onError: async () => {
-      try {
-        state = await fetch('/api/state').then((r) => r.json());
-        lastRoundKey = '';
-        route();
-      } catch (_) {
-        /* ignore */
-      }
-    },
-  });
 }
 
 function round2(n) {
@@ -601,14 +603,6 @@ function renderBetween() {
       <div class="lobby-status">Waiting for the next round<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
     </div>
   `;
-}
-
-function renderMotivationOverlay() {
-  screen = 'motivation';
-  app.innerHTML = `<div id="motivation-root"></div>`;
-  renderMotivation(app.querySelector('#motivation-root'), playerId, () => {
-    /* state update will re-route */
-  });
 }
 
 function escapeHtml(s) {

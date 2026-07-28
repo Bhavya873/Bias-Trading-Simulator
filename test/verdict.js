@@ -18,7 +18,6 @@ function check(name, got, want) {
 console.log('\nVerdict thresholds\n');
 
 const CONSISTENT = 'Directionally consistent';
-const INCONSISTENT = 'Directionally inconsistent';
 const INCONCLUSIVE = 'Inconclusive (n too small)';
 
 // Mean moves with the benchmark AND >= 2/3 of players agree
@@ -45,16 +44,16 @@ check(
   INCONCLUSIVE
 );
 
-// Mean against the benchmark
+// Mean against the benchmark → Inconclusive (never "inconsistent")
 check(
   'mean down against positive benchmark',
   verdict(-8, 12, [-1, -1, -1, -1, -1, -1]),
-  INCONSISTENT
+  INCONCLUSIVE
 );
 check(
   'mean down even with some players up',
   verdict(-3, 12, [1, 1, 1, -1, -1, -1]),
-  INCONSISTENT
+  INCONCLUSIVE
 );
 
 // Degenerate cases
