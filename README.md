@@ -29,12 +29,14 @@ docker compose up --build
 | Players (phones on LAN) | `http://<LAN-IP>:3000/` |
 
 ```bash
-PORT=4000 docker compose up --build
+HOST_PORT=4000 docker compose up --build
 PUBLIC_URL=https://your-app.example.com docker compose up --build
 PRESENTER_TOKEN=secret docker compose up --build
 ```
 
-Snapshots write to `./data`. Health check: `GET /api/health`.
+On Railway, set `PUBLIC_URL` to your public `https://…` URL (or rely on `RAILWAY_PUBLIC_DOMAIN`). Do not put `VOLUME` in the Dockerfile — attach a Railway Volume at `/app/data` only if you need snapshot persistence.
+
+Snapshots write to `./data` locally. Health check: `GET /api/health`.
 
 ---
 
