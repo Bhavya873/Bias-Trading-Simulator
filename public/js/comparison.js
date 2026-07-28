@@ -14,18 +14,14 @@ export async function renderComparisonView(root, data) {
     }
   }
 
-  const n = data.n || 0;
-
   root.innerHTML = `
     <div class="comparison-header">
       <div class="hero-num" style="text-align:center">Our class vs. the studies</div>
-      <div class="sm text-3" style="margin-top:12px">n=${n} students · illustrative comparison, not a statistical test</div>
     </div>
     ${cardR2(data.round2)}
     ${cardR3(data.round3)}
     ${cardR4(data.round4)}
     ${cardR5(data.round5)}
-    <div class="comparison-footer">n=${n}; illustrative of documented effects from the FCA and OSC, not an inferential test.</div>
   `;
 
   requestAnimationFrame(() => {
@@ -112,15 +108,14 @@ function cardR4(r) {
       </div>
       <div class="rank-blocks">
         <div class="rank-block">
-          <div class="label">Most active trader's return rank</div>
+          <div class="label">Most active</div>
           <div class="xl" style="margin-top:8px">#${r.mostActiveReturnRank ?? '—'} of ${r.n}</div>
         </div>
         <div class="rank-block">
-          <div class="label">Least active trader's return rank</div>
+          <div class="label">Least active</div>
           <div class="xl" style="margin-top:8px">#${r.leastActiveReturnRank ?? '—'} of ${r.n}</div>
         </div>
       </div>
-      <div class="sm text-2">${esc(r.description)}</div>
       <div class="verdict-row">${verdictChip(r.verdict)}</div>
     </div>
   `;

@@ -53,13 +53,13 @@ Sparklines of the **current round's** price history sit beside every ticker in a
 
 ## Round mechanics
 
-| Round | Concept | Flag | What changes |
-|------|---------|------|----------------|
-| 1 | Deliberate decisions | _(none)_ | Baseline |
-| 2 | Real-time information | `realTimeAlert` | NVDA alert + flash each tick; MU silent twin |
-| 3 | What everyone else is doing | `trendingTag` | Static "TRENDING" pill on labelled ticker |
-| 4 | Social ranking | `leaderboard` | Live leaderboard only |
-| 5 | Odds and payouts | `predictionContract` | Yes/No contract + motivation prompt |
+| Round | Flag | What changes |
+|------|------|----------------|
+| 1 | _(none)_ | Baseline — BOND ~$55 calm, NVDA ~$32 medium, SPCX ~$8.50 jumpy |
+| 2 | `realTimeAlert` | NVDA alert + flash each tick; SPCX silent twin (matched %) |
+| 3 | `trendingTag` | Static "TRENDING" pill on SPCX |
+| 4 | `leaderboard` | Live leaderboard only |
+| 5 | `predictionContract` | Yes/No contract on NVDA + motivation prompt |
 
 ## Editing the experiment
 
@@ -67,17 +67,18 @@ Sparklines of the **current round's** price history sit beside every ticker in a
 
 Edit [`config/rounds.js`](config/rounds.js):
 
+- `ASSETS` — default `BOND`, `NVDA`, `SPCX`
 - `timings.buyInMs` — buy-in length (default **10000** = 10 seconds)
 - `timings.tickMs` — interval between ticks (default 5000)
 - `timings.tickCount` — live ticks (default 10)
 - `rounds[n].prices` — 11 values per asset (tick 0…10)
-- `rounds[3].labelledTicker` — Round 3 trending tag target (default `MSFT`)
+- `rounds[3].labelledTicker` — Round 3 trending tag target (default `SPCX`)
 - `rounds[5].targetTicker` / `oddsYesCents` — prediction contract
 
 On startup the server **validates**:
 
-- Round 2: NVDA and MU % moves match within 0.2pp each tick
-- Round 3: labelled ticker finishes below at least two other assets
+- Round 2: NVDA and SPCX % moves match within 0.2pp each tick
+- Round 3: labelled ticker finishes below both other assets
 - All rounds matched on mean return and volatility
 
 ### Benchmarks (offline)
@@ -90,9 +91,9 @@ All colours and type live in [`public/css/theme.css`](public/css/theme.css). Com
 
 ## Presenter flow
 
-1. Lobby — big lobby code + URL + player grid → **Start Round 1**
+1. Lobby — big lobby code + player grid → **Start Round 1**
 2. During a round — averages + control bar (Next Tick / End / Next / Reset). Tick counters stay on this screen only.
-3. Between rounds — summary vs Round 1 + round-specific panel → **Next Round**
+3. Between rounds — visual share/split bars for that round’s story → **Next Round**
 4. After Round 5 — **Our class vs. the studies** (paired bars, per-card scaling)
 
 Players land on a **personal recap** on their phones (`/recap`). Individual performance is never projected except the Round 4 leaderboard.
@@ -122,5 +123,5 @@ Node.js + Express + WebSocket (`ws`), vanilla JS frontend, no build step. Player
 
 - n is small (≈6) — verdicts bias toward **Inconclusive**; this is illustrative, not an inferential test
 - Round 3 tag is **config-static**, not live volume
-- Round 2 NVDA/MU paths are deliberately matched; the alert asymmetry is the manipulation
+- Round 2 NVDA/SPCX paths are deliberately matched; the alert asymmetry is the manipulation
 - Sparklines appear in every round (not Round-1-only), so the baseline is no longer chart-free

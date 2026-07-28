@@ -12,7 +12,7 @@
 
 module.exports = {
   round2: {
-    label: 'Trading frequency increase from real-time alerts',
+    label: 'More trading after price alerts',
     source: 'Financial Conduct Authority (2024)',
     type: 'percentage',
     value: 12, // FCA: notifications increased trading ~12%
@@ -22,7 +22,7 @@ module.exports = {
     classMetricKey: 'liveTradeFreqChangePct',
   },
   round3: {
-    label: 'Increased likelihood of trading a labelled/top-traded asset',
+    label: 'More trading in the trending name',
     source: 'Ontario Securities Commission',
     type: 'percentage',
     value: 14,

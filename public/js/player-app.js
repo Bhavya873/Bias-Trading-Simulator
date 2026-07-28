@@ -361,7 +361,7 @@ function renderRound() {
   app.innerHTML = `
     <header class="sticky-header">
       <span class="round-pill">Round ${state.round}</span>
-      <div class="sticky-header__center">${escapeHtml(state.concept || '')}</div>
+      <div class="sticky-header__center"></div>
       <div class="sticky-header__right ${state.phase === 'buyin' ? '' : 'text-2'}" id="phase-ind">${phaseLabel}</div>
     </header>
     <div class="cue-zone ${cueClass}" id="cue-zone"></div>

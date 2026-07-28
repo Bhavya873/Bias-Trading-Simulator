@@ -2,13 +2,16 @@
  * Single source of truth for prices, timings, and per-round flags.
  * Exactly one mechanic flag per round (Round 1 has none).
  *
- * Tickers: GOOG, MSFT, NVDA, MU, SPCX
- * Each price array: 11 values (tick 0 … tick 10). Tick-0 in $10–$40.
+ * Tickers & price character (with $100 starting cash):
+ *   BOND  — safe: high unit price (~$55), tiny ±0.1–0.3%/tick moves
+ *   NVDA  — medium: mid price (~$32), ±1–2%/tick
+ *   SPCX  — risky: cheap (~$8–9), ±2.5–4%/tick swings
+ * Each price array: 11 values (tick 0 … tick 10).
  */
 
 'use strict';
 
-const ASSETS = ['GOOG', 'MSFT', 'NVDA', 'MU', 'SPCX'];
+const ASSETS = ['BOND', 'NVDA', 'SPCX'];
 
 const timings = {
   buyInMs: 10000,
@@ -34,104 +37,84 @@ function r2(n) {
   return Math.round(n * 100) / 100;
 }
 
+/** Ultra-calm bond drift — looks like a stable fund unit, not a stock. */
+const bondMoves = [0.2, -0.1, 0.25, -0.08, 0.18, 0.15, -0.12, 0.2, -0.08, 0.15];
+
 /**
- * Round 1 — Deliberate decisions (baseline)
- * Intended: moderate vol ~1–3%/tick, basket total return roughly flat-to-mild +.
- * No mechanic flags. Full history chart available on client.
+ * Round 1 — baseline
+ * BOND calm/high, NVDA medium, SPCX cheap & jumpy. No mechanic flags.
  */
 const round1 = {
   concept: 'Deliberate decisions',
   flags: {},
   prices: {
-    // ~+4.2% over round, mild zig-zag
-    GOOG: pathFromReturns(28.0, [1.2, -0.8, 1.5, -1.0, 0.9, 1.1, -0.6, 0.7, -0.5, 0.8]),
-    MSFT: pathFromReturns(32.0, [0.8, 1.0, -1.2, 0.6, 1.3, -0.9, 0.5, 1.0, -0.4, 0.7]),
-    NVDA: pathFromReturns(22.0, [2.0, -1.5, 1.8, -1.2, 1.0, 1.4, -0.8, 0.9, -1.0, 1.2]),
-    MU: pathFromReturns(18.0, [1.5, -1.0, 0.8, 1.2, -1.4, 0.7, 1.1, -0.9, 0.6, 0.5]),
-    // Speculative name, mild path for baseline weight tracking
-    SPCX: pathFromReturns(14.0, [2.5, -2.0, 1.5, -1.8, 2.0, -1.5, 1.2, -1.0, 0.8, -0.5]),
+    BOND: pathFromReturns(55.0, bondMoves),
+    NVDA: pathFromReturns(32.0, [1.6, -1.1, 1.5, -1.0, 1.2, -0.8, 1.1, 0.7, -0.7, 0.9]),
+    SPCX: pathFromReturns(8.5, [3.2, -2.6, 2.9, -2.4, 2.6, -2.1, 2.3, -1.9, 1.6, -1.2]),
   },
 };
 
 /**
- * Round 2 — Availability heuristic / real-time alerts
- * Intended: matched vol & similar basket return to R1.
- * HARD REQUIREMENT: NVDA and MU move by identical % each tick (within 0.2pp).
- * Alert + flash fire for NVDA only; MU is the silent twin.
+ * Round 2 — real-time alerts
+ * HARD REQUIREMENT: NVDA and SPCX move by identical % each tick (within 0.2pp).
+ * Alert + flash fire for NVDA only; SPCX is the silent twin. BOND stays calm.
  */
-const matchedMoves = [2.1, -1.4, 1.8, -1.1, 0.9, 1.5, -0.8, 1.0, -1.2, 0.7];
+const matchedMoves = [2.8, -2.2, 2.5, -2.0, 1.5, -1.8, 2.2, -1.6, 1.6, -1.4];
 
 const round2 = {
   concept: 'Real-time information',
   flags: { realTimeAlert: true },
   prices: {
-    GOOG: pathFromReturns(28.0, [1.0, -0.7, 1.3, -0.9, 0.8, 1.0, -0.5, 0.6, -0.4, 0.7]),
-    MSFT: pathFromReturns(32.0, [0.7, 0.9, -1.0, 0.5, 1.2, -0.8, 0.4, 0.9, -0.3, 0.6]),
-    // Identical % path — salience test depends on this
-    NVDA: pathFromReturns(22.0, matchedMoves),
-    MU: pathFromReturns(18.0, matchedMoves),
-    SPCX: pathFromReturns(14.0, [2.2, -1.8, 1.4, -1.6, 1.8, -1.3, 1.0, -0.9, 0.7, -0.4]),
+    BOND: pathFromReturns(55.0, [0.18, -0.1, 0.22, -0.08, 0.16, 0.12, -0.1, 0.18, -0.08, 0.14]),
+    NVDA: pathFromReturns(32.0, matchedMoves),
+    SPCX: pathFromReturns(8.5, matchedMoves),
   },
 };
 
 /**
- * Round 3 — Herd mentality / trending tag
- * Intended: mean return +2.8%, mean absolute tick move 1.09pp (matched to R1/R2/R4/R5).
- * labelledTicker (MSFT) finishes negative and below every unlabelled asset,
- * so following the crowd is measurably costly. Tag is config-static.
+ * Round 3 — trending tag
+ * labelledTicker (SPCX) finishes below BOND and NVDA so herding is costly.
  */
 const round3 = {
   concept: 'What everyone else is doing',
   flags: { trendingTag: true },
-  labelledTicker: 'MSFT', // boring name; underperformance is in the path, not the ticker
+  labelledTicker: 'SPCX',
   prices: {
-    GOOG: pathFromReturns(28.0, [1.5, -0.7, 1.6, -0.8, 1.4, -0.6, 1.3, -0.5, 1.2, 0.9]), // +5.4%
-    // Labelled: swings as much as the others but ends down — costly herding
-    MSFT: pathFromReturns(32.0, [1.2, -1.5, 1.1, -1.4, 1.3, -1.5, 1.0, -1.3, 0.9, -1.0]), // -1.3%
-    NVDA: pathFromReturns(22.0, [1.9, -0.8, 1.7, -0.7, 1.5, -0.6, 1.4, 0.7, 1.1, 0.7]), // +7.1%
-    MU: pathFromReturns(18.0, [1.1, -1.0, 1.0, -0.9, 1.2, -1.1, 0.9, -0.8, 0.8, 0.2]), // +1.4%
-    SPCX: pathFromReturns(14.0, [1.6, -1.3, 1.4, -1.2, 1.5, -1.3, 1.1, -1.0, 0.9, -0.3]), // +1.4%
+    BOND: pathFromReturns(55.0, [0.22, -0.1, 0.28, -0.08, 0.2, 0.18, -0.1, 0.22, -0.08, 0.18]),
+    NVDA: pathFromReturns(32.0, [1.8, -0.7, 1.6, -0.6, 1.4, -0.5, 1.3, 0.8, 1.0, 0.7]),
+    // Labelled: still volatile but ends down — costly herding
+    SPCX: pathFromReturns(8.5, [2.2, -2.6, 2.0, -2.5, 2.1, -2.6, 1.8, -2.4, 1.6, -2.2]),
   },
 };
 
 /**
- * Round 4 — Overconfidence / leaderboard
- * Intended: matched vol & return profile. No price special-casing — ranking is the mechanic.
+ * Round 4 — leaderboard
+ * Matched basket difficulty; ranking is the mechanic.
  */
 const round4 = {
   concept: 'Social ranking',
   flags: { leaderboard: true },
   prices: {
-    GOOG: pathFromReturns(28.0, [1.1, -0.9, 1.4, -0.8, 0.7, 1.2, -0.6, 0.8, -0.5, 0.6]),
-    MSFT: pathFromReturns(32.0, [0.9, 0.7, -1.1, 0.8, 1.0, -0.7, 0.6, 0.9, -0.5, 0.5]),
-    NVDA: pathFromReturns(22.0, [1.9, -1.3, 1.6, -1.0, 1.1, 1.3, -0.9, 0.8, -0.7, 1.0]),
-    MU: pathFromReturns(18.0, [1.3, -0.9, 0.7, 1.0, -1.2, 0.8, 0.9, -0.8, 0.5, 0.6]),
-    SPCX: pathFromReturns(14.0, [2.3, -1.9, 1.3, -1.5, 1.7, -1.4, 1.1, -0.8, 0.6, -0.4]),
+    BOND: pathFromReturns(55.0, [0.18, -0.12, 0.22, -0.1, 0.18, 0.12, -0.12, 0.16, -0.08, 0.16]),
+    NVDA: pathFromReturns(32.0, [1.7, -1.2, 1.5, -1.0, 1.1, 1.2, -0.8, 0.9, -0.7, 1.0]),
+    SPCX: pathFromReturns(8.5, [3.0, -2.5, 2.7, -2.3, 2.4, -2.0, 2.1, -1.8, 1.5, -1.1]),
   },
 };
 
 /**
- * Round 5 — Investing vs speculation vs gambling / prediction contract
- * Intended: matched equity vol. targetTicker odds path drives contract cents.
- * Contract settles 100 or 0 on final tick based on whether target closed up vs tick 0.
+ * Round 5 — prediction contract
+ * targetTicker odds path drives contract cents. NVDA closes up vs tick 0.
  */
 const round5 = {
   concept: 'Odds and payouts',
   flags: { predictionContract: true },
   targetTicker: 'NVDA',
-  /**
-   * Per-tick implied P(up) for the next move, used as YES price in cents (0–100).
-   * Index 0 unused during buy-in; indices 1..10 map to live ticks.
-   * Length 11 to align with tick indices.
-   */
   oddsYesCents: [55, 62, 48, 70, 40, 65, 35, 58, 45, 72, 50],
   prices: {
-    GOOG: pathFromReturns(28.0, [1.0, -0.8, 1.2, -0.7, 0.9, 0.8, -0.5, 0.7, -0.4, 0.5]),
-    MSFT: pathFromReturns(32.0, [0.8, 0.6, -1.0, 0.7, 1.1, -0.6, 0.5, 0.8, -0.4, 0.4]),
-    // Closes up vs tick 0 so YES settles at 100 in the default path
-    NVDA: pathFromReturns(22.0, [1.5, -1.8, 2.2, -1.5, 1.8, -2.0, 2.5, -1.2, 1.0, 0.8]),
-    MU: pathFromReturns(18.0, [1.2, -1.0, 0.9, 0.8, -1.1, 0.7, 1.0, -0.7, 0.4, 0.5]),
-    SPCX: pathFromReturns(14.0, [2.0, -1.7, 1.2, -1.4, 1.6, -1.2, 0.9, -0.7, 0.5, -0.3]),
+    BOND: pathFromReturns(55.0, [0.15, -0.1, 0.2, -0.08, 0.16, 0.12, -0.1, 0.16, -0.08, 0.14]),
+    // Closes up vs tick 0 so YES settles at 100
+    NVDA: pathFromReturns(32.0, [1.5, -1.8, 2.2, -1.5, 1.8, -2.0, 2.5, -1.2, 1.0, 0.8]),
+    SPCX: pathFromReturns(8.5, [2.8, -2.4, 2.5, -2.2, 2.3, -2.0, 2.0, -1.7, 1.4, -1.0]),
   },
 };
 
@@ -160,27 +143,27 @@ function roundProfile(roundNum) {
 
 /**
  * Boot-time validation. Fails loudly before class rather than mid-demo:
- *  - R2 NVDA/MU matched movers within 0.2pp
- *  - R3 labelled ticker below at least two unlabelled assets
+ *  - R2 NVDA/SPCX matched movers within 0.2pp
+ *  - R3 labelled ticker below both unlabelled assets
  *  - all rounds structurally matched on return and volatility
  */
 function validatePaths() {
   const errors = [];
 
-  // R2: NVDA vs MU percent deltas within 0.2pp
+  // R2: NVDA vs SPCX percent deltas within 0.2pp
   const nvda = round2.prices.NVDA;
-  const mu = round2.prices.MU;
+  const twin = round2.prices.SPCX;
   for (let i = 1; i < nvda.length; i++) {
     const dn = ((nvda[i] - nvda[i - 1]) / nvda[i - 1]) * 100;
-    const dm = ((mu[i] - mu[i - 1]) / mu[i - 1]) * 100;
-    if (Math.abs(dn - dm) > 0.2) {
+    const dt = ((twin[i] - twin[i - 1]) / twin[i - 1]) * 100;
+    if (Math.abs(dn - dt) > 0.2) {
       errors.push(
-        `R2 tick ${i}: NVDA ${dn.toFixed(3)}% vs MU ${dm.toFixed(3)}% (Δ>${0.2}pp)`
+        `R2 tick ${i}: NVDA ${dn.toFixed(3)}% vs SPCX ${dt.toFixed(3)}% (Δ>${0.2}pp)`
       );
     }
   }
 
-  // R3: labelled finishes below at least 2 unlabelled
+  // R3: labelled finishes below both unlabelled peers
   const labelled = round3.labelledTicker;
   const returns = {};
   for (const t of ASSETS) {

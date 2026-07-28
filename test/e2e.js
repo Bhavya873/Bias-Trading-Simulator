@@ -142,7 +142,7 @@ async function main() {
 
   let overspend = false;
   try {
-    await buy(players[0].player_id, 'GOOG', 100);
+    await buy(players[0].player_id, 'BOND', 100);
   } catch (_) {
     overspend = true;
   }
@@ -150,7 +150,7 @@ async function main() {
 
   let oversell = false;
   try {
-    await sell(players[0].player_id, 'MU', 1);
+    await sell(players[0].player_id, 'BOND', 1);
   } catch (_) {
     oversell = true;
   }
@@ -160,7 +160,7 @@ async function main() {
   try {
     await post('/api/trade', {
       player_id: players[0].player_id,
-      ticker: 'GOOG',
+      ticker: 'BOND',
       side: 'buy',
       shares: 1.5,
     });
@@ -184,8 +184,8 @@ async function main() {
   check('history grew with tick', s.priceHistory.NVDA.length === 2);
   check('prev prices match previous tick', s.prevPrices.NVDA === r1Prices0.NVDA);
 
-  // Ada buys 1 MU — regression: prev prices must survive
-  await buy(players[0].player_id, 'MU', 1);
+  // Ada buys 1 BOND — regression: prev prices must survive
+  await buy(players[0].player_id, 'BOND', 1);
   const afterTradeState = await get('/api/state');
   check(
     'prev prices survive a trade',
@@ -193,21 +193,21 @@ async function main() {
     'tick change would render as 0% otherwise'
   );
   check(
-    'integer MU holding after buy',
-    afterTradeState.players[players[0].player_id].holdings.MU === 1
+    'integer BOND holding after buy',
+    afterTradeState.players[players[0].player_id].holdings.BOND === 1
   );
 
   // Sell to zero
-  await sell(players[0].player_id, 'MU', 1);
+  await sell(players[0].player_id, 'BOND', 1);
   s = await get('/api/state');
-  check('sell-to-zero clears holding', s.players[players[0].player_id].holdings.MU === 0);
+  check('sell-to-zero clears holding', s.players[players[0].player_id].holdings.BOND === 0);
 
-  // live trades after MU buy+sell: Ada has 2 live so far; add more GOOG
-  // Plan: Ada 2 more GOOG (=4 live total), Bo 2, Cy 1, Dee 1
+  // live trades after BOND buy+sell: Ada has 2 live so far; add cheap SPCX volume
+  // Plan: Ada 2 more SPCX (=4 live total), Bo 2, Cy 1, Dee 1
   const r1Plan = [2, 2, 1, 1];
   for (let i = 0; i < players.length; i++) {
     for (let k = 0; k < r1Plan[i]; k++) {
-      await buy(players[i].player_id, 'GOOG', 1);
+      await buy(players[i].player_id, 'SPCX', 1);
     }
   }
   s = await get('/api/state');
@@ -229,7 +229,7 @@ async function main() {
 
   let tradeAfterEnd = false;
   try {
-    await buy(players[0].player_id, 'GOOG', 1);
+    await buy(players[0].player_id, 'SPCX', 1);
   } catch (_) {
     tradeAfterEnd = true;
   }
@@ -247,25 +247,25 @@ async function main() {
 
   await post('/api/present/next-tick');
   const nvdaSeries = [];
-  const muSeries = [];
+  const spcxSeries = [];
   s = await get('/api/state');
   nvdaSeries.push(s.prices.NVDA);
-  muSeries.push(s.prices.MU);
+  spcxSeries.push(s.prices.SPCX);
 
   for (let t = 1; t <= 3; t++) {
     await post('/api/present/next-tick');
     s = await get('/api/state');
     nvdaSeries.push(s.prices.NVDA);
-    muSeries.push(s.prices.MU);
+    spcxSeries.push(s.prices.SPCX);
   }
 
   let maxGap = 0;
   for (let i = 1; i < nvdaSeries.length; i++) {
     const dn = ((nvdaSeries[i] - nvdaSeries[i - 1]) / nvdaSeries[i - 1]) * 100;
-    const dm = ((muSeries[i] - muSeries[i - 1]) / muSeries[i - 1]) * 100;
-    maxGap = Math.max(maxGap, Math.abs(dn - dm));
+    const ds = ((spcxSeries[i] - spcxSeries[i - 1]) / spcxSeries[i - 1]) * 100;
+    maxGap = Math.max(maxGap, Math.abs(dn - ds));
   }
-  check('NVDA and MU move within 0.2pp', maxGap <= 0.2, `max gap ${maxGap.toFixed(3)}pp`);
+  check('NVDA and SPCX move within 0.2pp', maxGap <= 0.2, `max gap ${maxGap.toFixed(3)}pp`);
 
   await new Promise((r) => setTimeout(r, 400));
   s = await get('/api/state');
@@ -278,7 +278,8 @@ async function main() {
   await buy(players[0].player_id, 'NVDA', 1);
   await post('/api/present/end-round');
   s = await get('/api/state');
-  check('R2 specific panel counts NVDA vs MU', s.betweenSummary.specific.nvdaTrades === 5);
+  check('R2 specific panel counts NVDA trades', s.betweenSummary.specific.nvdaTrades === 5);
+  check('R2 specific panel has SPCX twin count', s.betweenSummary.specific.spcxTrades === 0);
 
   // ---- Round 3 ----
   console.log('\nRound 3 — trendingTag');
@@ -313,7 +314,7 @@ async function main() {
   for (let k = 0; k < 3; k++) {
     await buy(players[0].player_id, 'SPCX', 1);
   }
-  await buy(players[1].player_id, 'GOOG', 1);
+  await buy(players[1].player_id, 'BOND', 1);
   s = await get('/api/state');
   check('leaderboard sorted by value', isSortedDesc(s.leaderboard.map((r) => r.portfolioValue)));
   check('Ada holds 3 SPCX', s.players[players[0].player_id].holdings.SPCX === 3);
@@ -362,7 +363,7 @@ async function main() {
     side: 'no',
     contracts: 1,
   });
-  await buy(players[2].player_id, 'MSFT', 1);
+  await buy(players[2].player_id, 'BOND', 1);
 
   await post('/api/present/end-round');
   s = await get('/api/state');
@@ -457,6 +458,7 @@ async function main() {
     '/js/recap.js',
     '/js/api.js',
     '/js/format.js',
+    '/js/charts.js',
     '/js/mechanics/r2-alert.js',
     '/js/mechanics/r3-trending.js',
     '/js/mechanics/r4-leaderboard.js',

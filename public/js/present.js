@@ -1,5 +1,6 @@
 import { api, connectState } from './api.js';
 import { fmtMoney } from './format.js';
+import { shareBar, valueBar } from './charts.js';
 import { renderLeaderboard } from './mechanics/r4-leaderboard.js';
 import { renderComparisonView } from './comparison.js';
 
@@ -60,15 +61,11 @@ function render() {
 }
 
 function controlBar() {
-  const flags = state.flags || {};
-  const flagName = Object.keys(flags).find((k) => flags[k]) || 'none (baseline)';
   const canStart = state.phase === 'lobby' || state.phase === 'buyin' || state.phase === 'live';
   return `
     <div class="present-control">
       <span class="round-pill">Round ${state.round || '—'}</span>
-      <span class="sm text-2">${esc(state.concept || 'Lobby')}</span>
       <span class="sm tabular">${phaseText()}</span>
-      <span class="mechanic-chip">${esc(flagName)}</span>
       <div style="flex:1"></div>
       <button type="button" class="btn btn--primary" data-act="start" ${canStart && state.phase === 'lobby' ? '' : 'disabled'}>Start Round</button>
       <button type="button" class="btn btn--secondary" data-act="tick">Next Tick</button>
@@ -88,8 +85,8 @@ function phaseText() {
   }
   if (state.phase === 'live') return `Live tick ${state.tick}/${state.tickCount}`;
   if (state.phase === 'motivation') return 'Motivation prompt';
-  if (state.phase === 'between') return 'Between rounds';
-  return state.phase;
+  if (state.phase === 'between') return '';
+  return '';
 }
 
 function wireControls() {
@@ -181,7 +178,6 @@ function livePanel() {
       </div>
     </div>
     ${state.round === 4 ? '<div id="lb"></div>' : ''}
-    <div class="sm text-3">Group averages only — individual results stay on phones. n=${players.length}</div>
   `;
 }
 
@@ -190,76 +186,61 @@ function betweenPanel() {
   if (!s) {
     return `<div class="xl">Round ${state.round} complete</div>`;
   }
-  const a = s.averages;
-  const r1 = s.r1 || {};
-
-  const row = (label, cur, base, mode) => {
-    let change = '—';
-    if (base != null && cur != null) {
-      if (mode === 'pct') {
-        change = base === 0 ? (cur > 0 ? '+∞' : '0%') : (((cur - base) / Math.abs(base)) * 100).toFixed(0) + '%';
-      } else {
-        change = (cur - base).toFixed(1) + ' pp';
-      }
-    }
-    return `<tr>
-      <td>${label}</td>
-      <td class="tabular">${num(cur)}</td>
-      <td class="tabular">${num(base)}</td>
-      <td class="tabular">${change}</td>
-    </tr>`;
-  };
-
-  let specific = '';
+  const a = s.averages || {};
   const sp = s.specific;
-  if (state.round === 2 && sp) {
-    specific = `<div class="card" style="margin-top:16px">
-      <div class="label">Round 2 — NVDA vs MU live trades</div>
-      <div class="lg" style="margin-top:12px">NVDA ${sp.nvdaTrades} · MU ${sp.muTrades}</div>
-    </div>`;
+
+  let visual = '';
+  if (state.round === 1) {
+    const trades = a.liveTradesPerPlayer || 0;
+    const ret = a.meanReturnPct || 0;
+    visual = `
+      <div class="between-visual">
+        <div class="label" style="margin-bottom:12px">Class baseline</div>
+        ${valueBar('Avg live trades', trades, Math.max(trades, 4))}
+        ${valueBar('Mean return', ret, Math.max(Math.abs(ret), 5), '%')}
+      </div>
+    `;
+  } else if (state.round === 2 && sp) {
+    visual = `
+      <div class="between-visual">
+        <div class="label" style="margin-bottom:12px">Live trades — alerted vs silent twin</div>
+        ${shareBar('NVDA', sp.nvdaTrades, 'SPCX', sp.spcxTrades)}
+      </div>
+    `;
   } else if (state.round === 3 && sp) {
-    specific = `<div class="card" style="margin-top:16px">
-      <div class="label">Labelled ticker (${sp.labelledTicker}) share of live trades</div>
-      <div class="lg" style="margin-top:12px">${Number(sp.labelledSharePct).toFixed(1)}%</div>
-    </div>`;
+    const labelled = Number(sp.labelledSharePct) || 0;
+    const other = Math.max(0, 100 - labelled);
+    visual = `
+      <div class="between-visual">
+        <div class="label" style="margin-bottom:12px">Live trade share</div>
+        ${shareBar(sp.labelledTicker || 'SPCX', labelled, 'Other', other)}
+      </div>
+    `;
+  } else if (state.round === 4) {
+    visual = `<div id="lb-between" class="between-visual"></div>`;
   } else if (state.round === 5 && sp) {
-    specific = `<div class="card" style="margin-top:16px">
-      <div class="label">Contract vs equity volume</div>
-      <div class="lg" style="margin-top:12px">${fmtMoney(sp.contractVol)} vs ${fmtMoney(sp.equityVol)}</div>
-    </div>`;
+    visual = `
+      <div class="between-visual">
+        <div class="label" style="margin-bottom:12px">Contract vs equity volume</div>
+        ${shareBar('Contract', sp.contractVol, 'Equity', sp.equityVol)}
+      </div>
+    `;
   }
 
   return `
-    <div class="xl" style="margin-bottom:8px">Round ${state.round} complete</div>
+    <div class="xl" style="margin-bottom:24px">Round ${state.round} complete</div>
     ${
       state.phase === 'motivation'
         ? '<div class="sm text-2" style="margin-bottom:16px">Players are answering the motivation prompt…</div>'
         : ''
     }
-    <table class="summary-table">
-      <thead>
-        <tr><th>Metric</th><th>This round (avg)</th><th>Round 1 (avg)</th><th>Change</th></tr>
-      </thead>
-      <tbody>
-        ${row('Live trades per player', a.liveTradesPerPlayer, r1.liveTradesPerPlayer, 'pct')}
-        ${row('SPCX portfolio weight', a.spcxWeightPct, r1.spcxWeightPct, 'pp')}
-        ${row('Mean trade size (% of portfolio)', a.meanTradeSizePct, r1.meanTradeSizePct, 'pp')}
-        ${row('Mean round return', a.meanReturnPct, r1.meanReturnPct, 'pp')}
-      </tbody>
-    </table>
-    ${specific}
-    ${state.round === 4 ? '<div id="lb-between" style="margin-top:16px"></div>' : ''}
-    <div style="margin-top:24px">
+    ${visual}
+    <div style="margin-top:32px">
       <button type="button" class="btn btn--primary" data-act="next" style="max-width:320px">
         ${state.round >= 5 ? 'Show class vs studies' : 'Next Round'}
       </button>
     </div>
   `;
-}
-
-function num(v) {
-  if (v == null || Number.isNaN(v)) return '—';
-  return Number(v).toFixed(1);
 }
 
 function esc(s) {
